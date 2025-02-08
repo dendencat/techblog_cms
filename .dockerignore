@@ -16,6 +16,7 @@ yarn-error.log
 *.log
 *.md
 *.txt
+!requirements.txt
 !README.md
 !LICENSE.txt
 
