@@ -27,13 +27,12 @@ services:
       context: .
       dockerfile: Dockerfile.django
     command: >
-      sh -c "
-        mkdir -p /app/logs &&
-        gunicorn techblog.wsgi:application 
-        --bind 0.0.0.0:8000 
-        --error-logfile=/app/logs/error.log 
-        --capture-output
-        --log-level=debug"
+      sh -c "mkdir -p /app/logs && \
+        gunicorn techblog.wsgi:application \
+          --bind 0.0.0.0:8000 \
+          --error-logfile /app/logs/error.log \
+          --capture-output \
+          --log-level debug"
     volumes:
       - .:/app
       - logs:/app/logs
