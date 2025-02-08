@@ -29,6 +29,7 @@ services:
     command: gunicorn --bind 0.0.0.0:8000 techblog.wsgi:application
     volumes:
       - .:/app
+      - ./logs:/app/logs
     expose:
       - 8000
     environment:
@@ -92,3 +93,4 @@ networks:
 volumes:
   db_data:
   static_volume:
+  logs:
