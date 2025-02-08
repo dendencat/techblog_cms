@@ -2,6 +2,9 @@
 *.crt
 *.key
 
+# nginx config
+**/default.conf
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
