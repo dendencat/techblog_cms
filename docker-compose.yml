@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  # Load Balancer - Nginx
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d # Mount Nginx configuration
+      - ./nginx/ssl:/etc/nginx/ssl # Mount SSL certificates
+      - static_volume:/var/www/static
+    depends_on:
+      - django
+    networks:
+      - techblog_network
+    restart: always
+    # Security: Using official image, regularly update to patch vulnerabilities.
+    # Enforces HTTPS and adds security headers.
+
+  # Web Application - Django with Gunicorn
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    command: gunicorn --bind 0.0.0.0:8000 techblog.wsgi:application
+    volumes:
+      - .:/app
+    expose:
+      - 8000
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-somesecretkey}  # Replace with a strong secret key
+      DEBUG: ${DEBUG:-False}
+      DATABASE_URL: postgres://${POSTGRES_USER:-techblog}:${POSTGRES_PASSWORD:-techblogpass}@db:5432/${POSTGRES_DB:-techblogdb}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    networks:
+      - techblog_network
+    restart: always
+    # Security: Runs the application as a non-root user.
+    # Environment variables for sensitive settings.
+
+  # Database - PostgreSQL
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - db_data:/var/lib/postgresql/data # Persist data
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-techblog}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-techblogpass}
+      POSTGRES_DB: ${POSTGRES_DB:-techblogdb}
+    networks:
+      - techblog_network
+    restart: always
+    # Security: Uses a specific PostgreSQL version.
+    # Environment variables for credentials.
+
+  # Caching - Redis
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass your_redis_password # Set a password
+    ports:
+      - "6379:6379"
+    networks:
+      - techblog_network
+    restart: always
+    # Security: Requires a password for authentication.
+    # Consider network restrictions for enhanced security.
+
+  # Static Files Server
+  static:
+    image: nginx:alpine
+    volumes:
+      - static_volume:/usr/share/nginx/html
+    ports:
+      - "8080:80"
+    networks:
+      - techblog_network
+    restart: unless-stopped
+
+networks:
+  techblog_network:
+    driver: bridge
+
+volumes:
+  db_data:
+  static_volume:

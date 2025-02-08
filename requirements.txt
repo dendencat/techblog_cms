@@ -1,0 +1,6 @@
+
+
+
+
+
+# Add other dependencies as neededredis==5.0.1psycopg2-binary==2.9.9gunicorn==21.2.0Django==4.2.10

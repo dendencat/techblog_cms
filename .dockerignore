@@ -1,0 +1,36 @@
+# Version control
+.git
+.gitignore
+
+# Node.js
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.*
+
+# Development
+*.log
+*.md
+*.txt
+!README.md
+!LICENSE.txt
+
+# IDE specific
+.vscode
+.idea
+*.swp
+*.swo
+
+# Build output
+dist
+build
+.next
+out
+
+# Docker
+Dockerfile*
+docker-compose*

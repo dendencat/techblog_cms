@@ -1,0 +1,19 @@
+# Use an official Nginx image as the base
+FROM nginx:1.25-alpine
+
+# Remove default Nginx configuration
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy configuration and static files
+COPY nginx.conf /etc/nginx/conf.d/
+COPY static /var/www/static
+
+# Set proper permissions for static files
+RUN chown -R nginx:nginx /var/www/static
+
+# Expose ports
+EXPOSE 80
+EXPOSE 443
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
