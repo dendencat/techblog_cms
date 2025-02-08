@@ -26,10 +26,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.django
-    command: gunicorn --bind 0.0.0.0:8000 techblog.wsgi:application
+    command: >
+      bash -c "chmod -R 775 /app/logs &&
+              gunicorn --bind 0.0.0.0:8000 
+              --log-file=/app/logs/error.log 
+              --log-level=debug 
+              techblog.wsgi:application"
     volumes:
       - .:/app
       - ./logs:/app/logs
+    user: "${UID:-1000}:${GID:-1000}"
     expose:
       - 8000
     environment:
