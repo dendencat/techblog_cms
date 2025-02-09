@@ -1,24 +1,44 @@
-#!/bin/bash# Check for changesecho "Checking for changes..."if ! git diff --quiet HEAD; then  # Pull the latest changes from the repository  echo "Pulling latest changes..."  git pull origin main  # Stop and remove existing containers  echo "Stopping and removing existing containers..."  docker compose down  # Build the Docker images  echo "Building Docker images..."  docker compose build --no-cache  # Start the containers  echo "Starting the containers..."  docker compose up -d
+#!/bin/bash
 
-  echo "Deployment completed!"
-else
-  echo "No changes detected. Skipping deployment."
-fi#!/bin/bash
+# Exit on any error
+set -e
+
+# Navigate to the project directory
+cd "$(dirname "$0")"
 
 # Pull the latest changes from the repository
 echo "Pulling latest changes..."
-git pull origin main
+git pull origin main || {
+    echo "Failed to pull latest changes"
+    exit 1
+}
 
 # Stop and remove existing containers
 echo "Stopping and removing existing containers..."
-docker compose down
+docker compose down || {
+    echo "Failed to stop containers"
+    exit 1
+}
+
+# Install the Python package in development mode inside the container
+echo "Installing Python package..."
+docker compose run --rm django pip install -e . || {
+    echo "Failed to install Python package"
+    exit 1
+}
 
 # Build the Docker images
 echo "Building Docker images..."
-docker compose build --no-cache
+docker compose build --no-cache || {
+    echo "Failed to build images"
+    exit 1
+}
 
 # Start the containers
 echo "Starting the containers..."
-docker compose up -d
+docker compose up -d || {
+    echo "Failed to start containers"
+    exit 1
+}
 
 echo "Deployment completed!"
