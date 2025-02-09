@@ -11,11 +11,16 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d # Mount Nginx configuration
       - ./nginx/ssl:/etc/nginx/ssl # Mount SSL certificates
       - static_volume:/var/www/static
+      - media_volume:/var/www/media
     depends_on:
       - django
     networks:
       - techblog_network
     restart: always
+    environment:
+      - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/conf.d
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
+      - NGINX_HOST=localhost
     # Security: Using official image, regularly update to patch vulnerabilities.
     # Enforces HTTPS and adds security headers.
 
@@ -95,4 +100,6 @@ volumes:
   db_data:
   static_volume:
   logs:
+    driver: local
+  media_volume:
     driver: local
