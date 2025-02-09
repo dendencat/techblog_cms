@@ -5,25 +5,11 @@ set -e
 DOMAIN="blog.iohub.link"
 EMAIL="your@email.com"
 RSA_KEY_SIZE=4096
-DATA_PATH="./data/certbot"
 
-# 関数定義
-check_requirements() {
-    if ! command -v docker compose >/dev/null 2>&1; then
-        echo "Error: docker compose is not installed"
-        exit 1
-    fi
-}
-
-# 要件チェック
-check_requirements
-
-# Create required directories
-mkdir -p "$DATA_PATH"
+# ディレクトリ作成
 mkdir -p "./nginx/ssl"
 chmod 755 "./nginx/ssl"
 
-# Generate dummy certificate
 echo "Creating dummy certificate..."
 openssl req -x509 -nodes -newkey rsa:$RSA_KEY_SIZE \
     -days 1 \
@@ -32,12 +18,13 @@ openssl req -x509 -nodes -newkey rsa:$RSA_KEY_SIZE \
     -subj "/CN=localhost" \
     -addext "subjectAltName=DNS:localhost,DNS:$DOMAIN"
 
+chmod 644 "./nginx/ssl/privkey.pem" "./nginx/ssl/fullchain.pem"
+
 echo "Starting nginx..."
 docker compose up -d nginx
 echo "Waiting for nginx to start..."
 sleep 10
 
-# Remove dummy certificate and request Let's Encrypt certificate
 echo "Requesting Let's Encrypt certificate for $DOMAIN..."
 docker compose run --rm --entrypoint "\
     certbot certonly --webroot \
@@ -50,13 +37,12 @@ docker compose run --rm --entrypoint "\
     --server https://acme-v02.api.letsencrypt.org/directory \
     -d $DOMAIN" certbot
 
-# Copy certificates to nginx ssl directory
-echo "Copying certificates to nginx ssl directory..."
-cp "$DATA_PATH/live/$DOMAIN/privkey.pem" "./nginx/ssl/"
-cp "$DATA_PATH/live/$DOMAIN/fullchain.pem" "./nginx/ssl/"
-chmod 644 "./nginx/ssl/privkey.pem" "./nginx/ssl/fullchain.pem"
+echo "Copying Let's Encrypt certificates..."
+docker compose run --rm --entrypoint "\
+    cp -L /etc/letsencrypt/live/$DOMAIN/privkey.pem /etc/nginx/ssl/ && \
+    cp -L /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/nginx/ssl/ && \
+    chmod 644 /etc/nginx/ssl/privkey.pem /etc/nginx/ssl/fullchain.pem" certbot
 
-# Restart nginx
 echo "Restarting nginx..."
 docker compose restart nginx
 
