@@ -1,3 +1,5 @@
+version: '3'
+
 services:
   # Load Balancer - Nginx
   nginx:
@@ -12,8 +14,12 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl # Mount SSL certificates
       - static_volume:/var/www/static
       - media_volume:/var/www/media
+      - certbot_etc:/etc/letsencrypt
+      - certbot_var:/var/lib/letsencrypt
+      - webroot:/var/www/certbot
     depends_on:
       - django
+      - certbot
     networks:
       - techblog_network
     restart: always
@@ -92,6 +98,15 @@ services:
       - techblog_network
     restart: unless-stopped
 
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    volumes:
+      - certbot_etc:/etc/letsencrypt
+      - certbot_var:/var/lib/letsencrypt
+      - webroot:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot --email your@email.com --agree-tos --no-eff-email -d blog.iohub.link
+
 networks:
   techblog_network:
     driver: bridge
@@ -103,3 +118,6 @@ volumes:
     driver: local
   media_volume:
     driver: local
+  certbot_etc:
+  certbot_var:
+  webroot:
