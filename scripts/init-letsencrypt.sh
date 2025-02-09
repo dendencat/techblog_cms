@@ -4,38 +4,41 @@ DOMAIN="blog.iohub.link"
 EMAIL="your@email.com"
 RSA_KEY_SIZE=4096
 
-# Check if certificates already exist
-if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
-    echo "Certificates already exist, skipping initialization"
-    exit 0
-fi
+# Create required directories
+mkdir -p "./nginx/ssl"
+mkdir -p "./data/certbot/conf"
+mkdir -p "./data/certbot/www"
 
-# Create dummy certificates
-mkdir -p "/etc/nginx/ssl"
+# Create dummy certificate
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout "/etc/nginx/ssl/dummy.key" \
-    -out "/etc/nginx/ssl/dummy.crt" \
+    -keyout "./nginx/ssl/dummy.key" \
+    -out "./nginx/ssl/dummy.crt" \
     -subj "/CN=localhost"
 
-# Start nginx without certbot dependency
+# Start nginx
 docker compose up -d nginx
 echo "Waiting for nginx to start..."
 sleep 5
 
-# Request the real certificate
-docker compose run --rm --entrypoint "\
-    certbot certonly --webroot -w /var/www/certbot \
+# Request Let's Encrypt certificate
+docker compose run --rm certbot certonly \
+    --webroot \
+    --webroot-path=/var/www/certbot \
     --email $EMAIL \
     --rsa-key-size $RSA_KEY_SIZE \
     --agree-tos \
     --no-eff-email \
-    --force-renewal \
-    -d $DOMAIN" certbot
+    --staging \
+    -d $DOMAIN
+
+# Copy certificates if successful
+if [ -d "./data/certbot/conf/live/$DOMAIN" ]; then
+    echo "Certificates successfully obtained"
+    cp "./nginx/ssl/dummy.crt" "./nginx/ssl/fullchain.pem"
+    cp "./nginx/ssl/dummy.key" "./nginx/ssl/privkey.pem"
+fi
 
 # Restart nginx to load the new certificate
 docker compose restart nginx
-
-# Start certbot service for automatic renewals
-docker compose up -d certbot
 
 echo "Initialization completed"
