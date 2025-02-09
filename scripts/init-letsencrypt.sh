@@ -6,19 +6,21 @@ RSA_KEY_SIZE=4096
 
 # Create required directories
 mkdir -p "./nginx/ssl"
-mkdir -p "./data/certbot/conf"
-mkdir -p "./data/certbot/www"
+chmod 755 "./nginx/ssl"
 
-# Create dummy certificate
+# Generate dummy certificates first
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout "./nginx/ssl/dummy.key" \
-    -out "./nginx/ssl/dummy.crt" \
-    -subj "/CN=localhost"
+    -keyout "./nginx/ssl/privkey.pem" \
+    -out "./nginx/ssl/fullchain.pem" \
+    -subj "/CN=localhost" \
+    -addext "subjectAltName=DNS:localhost"
 
-# Start nginx
+chmod 644 "./nginx/ssl/privkey.pem" "./nginx/ssl/fullchain.pem"
+
+# Start nginx with dummy certificates
 docker compose up -d nginx
 echo "Waiting for nginx to start..."
-sleep 5
+sleep 10
 
 # Request Let's Encrypt certificate
 docker compose run --rm certbot certonly \
@@ -29,13 +31,15 @@ docker compose run --rm certbot certonly \
     --agree-tos \
     --no-eff-email \
     --staging \
+    --force-renewal \
     -d $DOMAIN
 
-# Copy certificates if successful
+# Copy Let's Encrypt certificates
 if [ -d "./data/certbot/conf/live/$DOMAIN" ]; then
     echo "Certificates successfully obtained"
-    cp "./nginx/ssl/dummy.crt" "./nginx/ssl/fullchain.pem"
-    cp "./nginx/ssl/dummy.key" "./nginx/ssl/privkey.pem"
+    cp "./data/certbot/conf/live/$DOMAIN/fullchain.pem" "./nginx/ssl/fullchain.pem"
+    cp "./data/certbot/conf/live/$DOMAIN/privkey.pem" "./nginx/ssl/privkey.pem"
+    chmod 644 "./nginx/ssl/fullchain.pem" "./nginx/ssl/privkey.pem"
 fi
 
 # Restart nginx to load the new certificate

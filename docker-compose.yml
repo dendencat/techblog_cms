@@ -10,11 +10,11 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d # Mount Nginx configuration
-      - ./nginx/ssl:/etc/nginx/ssl # Mount SSL certificates
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
       - static_volume:/var/www/static
       - media_volume:/var/www/media
-      - certbot_etc:/etc/letsencrypt
+      - certbot_etc:/etc/letsencrypt:ro
       - certbot_var:/var/lib/letsencrypt
       - webroot:/var/www/certbot
     depends_on:
@@ -108,6 +108,7 @@ services:
       - certbot_etc:/etc/letsencrypt
       - certbot_var:/var/lib/letsencrypt
       - webroot:/var/www/certbot
+      - ./nginx/ssl:/etc/nginx/ssl
     entrypoint: "/bin/sh"
     command: -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
     restart: unless-stopped
