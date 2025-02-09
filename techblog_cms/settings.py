@@ -40,7 +40,7 @@ ROOT_URLCONF = 'techblog_cms.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'techblog_cms', 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
