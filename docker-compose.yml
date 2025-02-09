@@ -19,7 +19,6 @@ services:
       - webroot:/var/www/certbot
     depends_on:
       - django
-      - certbot
     networks:
       - techblog_network
     restart: always
@@ -27,6 +26,11 @@ services:
       - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/conf.d
       - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
       - NGINX_HOST=localhost
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     # Security: Using official image, regularly update to patch vulnerabilities.
     # Enforces HTTPS and adds security headers.
 
@@ -104,9 +108,8 @@ services:
       - certbot_etc:/etc/letsencrypt
       - certbot_var:/var/lib/letsencrypt
       - webroot:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    depends_on:
-      - nginx
+    command: "/bin/sh -c 'sleep 10 && trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done;'"
+    restart: unless-stopped
 
 networks:
   techblog_network:
