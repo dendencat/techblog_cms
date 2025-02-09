@@ -54,14 +54,12 @@ jobs:
           
       - name: Run tests
         env:
-          DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
+          DJANGO_SETTINGS_MODULE: techblog_cms.settings
           SECRET_KEY: test-key
-          DEBUG: 'True'
-          POSTGRES_HOST: localhost
-          ALLOWED_HOSTS: localhost,127.0.0.1,blog.iohub.link
+          DEBUG: 'False'
+          ALLOWED_HOSTS: localhost,127.0.0.1,testserver,blog.iohub.link
         run: |
-          mkdir -p techblog_cms/tests
-          python -m pytest --cov=techblog_cms --cov-report=xml
+          python -m pytest -v --cov=techblog_cms --cov-report=xml
 
   build:
     needs: test
