@@ -106,19 +106,15 @@ services:
   certbot:
     image: certbot/certbot:latest
     volumes:
-      - ./nginx/ssl:/etc/nginx/ssl
-      - certbot_etc:/etc/letsencrypt
+      - ./nginx/ssl:/etc/nginx/ssl:rw
+      - certbot_etc:/etc/letsencrypt:rw
       - certbot_var:/var/lib/letsencrypt
       - webroot:/var/www/certbot
     user: root
     entrypoint: "/bin/sh"
     command: >
       -c 'trap exit TERM; while :; do 
-      certbot renew --webroot -w /var/www/certbot --quiet && 
-      cp -L /etc/letsencrypt/live/${DOMAIN:-blog.iohub.link}/privkey.pem /etc/nginx/ssl/ && 
-      cp -L /etc/letsencrypt/live/${DOMAIN:-blog.iohub.link}/fullchain.pem /etc/nginx/ssl/ && 
-      chmod 644 /etc/nginx/ssl/*.pem && 
-      docker compose exec nginx nginx -s reload; 
+      certbot renew --webroot -w /var/www/certbot --deploy-hook "cp -fL /etc/letsencrypt/live/${DOMAIN:-blog.iohub.link}/* /etc/nginx/ssl/ && chmod 644 /etc/nginx/ssl/*.pem" --quiet && 
       sleep 12h & wait $${!}; 
       done'
     restart: unless-stopped

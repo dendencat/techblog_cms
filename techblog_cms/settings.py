@@ -12,7 +12,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # ALLOWED_HOSTS configuration
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,blog.iohub.link', cast=Csv())
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
 # Application definition
 INSTALLED_APPS = [
