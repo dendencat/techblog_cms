@@ -49,7 +49,7 @@ services:
     environment:
       SECRET_KEY: ${SECRET_KEY:-somesecretkey}  # Replace with a strong secret key
       DEBUG: ${DEBUG:-False}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,blog.iohub.link}
       DATABASE_URL: postgres://${POSTGRES_USER:-techblog}:${POSTGRES_PASSWORD:-techblogpass}@db:5432/${POSTGRES_DB:-techblogdb}
       REDIS_URL: redis://redis:6379/0
       DJANGO_SETTINGS_MODULE: techblog_cms.settings
@@ -112,7 +112,11 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl
     user: root
     entrypoint: "/bin/sh"
-    command: -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
+    command: >
+      -c 'trap exit TERM; while :; do 
+      certbot renew --webroot -w /var/www/certbot --quiet; 
+      sleep 12h & wait $${!}; 
+      done'
     restart: unless-stopped
 
 networks:

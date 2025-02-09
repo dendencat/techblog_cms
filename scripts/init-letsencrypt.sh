@@ -1,8 +1,21 @@
 #!/bin/bash
 
+set -e  # エラー発生時に終了
+
 DOMAIN="blog.iohub.link"
 EMAIL="your@email.com"
 RSA_KEY_SIZE=4096
+
+# 関数定義
+check_requirements() {
+    if ! command -v docker compose >/dev/null 2>&1; then
+        echo "Error: docker compose is not installed"
+        exit 1
+    fi
+}
+
+# 要件チェック
+check_requirements
 
 # Create required directories with sudo
 sudo mkdir -p "./nginx/ssl"
@@ -14,7 +27,7 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout "./nginx/ssl/privkey.pem" \
     -out "./nginx/ssl/fullchain.pem" \
     -subj "/CN=localhost" \
-    -addext "subjectAltName=DNS:localhost"
+    -addext "subjectAltName=DNS:localhost,DNS:blog.iohub.link"
 
 sudo chmod 644 "./nginx/ssl/privkey.pem" "./nginx/ssl/fullchain.pem"
 
@@ -27,23 +40,20 @@ echo "Waiting for nginx to start..."
 sleep 10
 
 # Request Let's Encrypt certificate
-docker compose run --rm certbot certonly \
-    --webroot \
+if ! docker compose run --rm --entrypoint "\
+    certbot certonly --webroot \
     --webroot-path=/var/www/certbot \
     --email $EMAIL \
     --rsa-key-size $RSA_KEY_SIZE \
     --agree-tos \
     --no-eff-email \
     --staging \
-    --force-renewal \
-    -d $DOMAIN
+    -d $DOMAIN" certbot; then
+    echo "Error: Failed to obtain certificate"
+    exit 1
+fi
 
-# Ensure proper permissions
-sudo chown -R $USER:$USER "./nginx/ssl"
-sudo chmod -R 755 "./nginx/ssl"
-sudo chmod 644 "./nginx/ssl/fullchain.pem" "./nginx/ssl/privkey.pem"
+# Start all services
+docker compose up -d
 
-# Restart nginx to load the new certificate
-docker compose restart nginx
-
-echo "Initialization completed"
+echo "Initialization completed successfully"
