@@ -20,13 +20,6 @@ docker compose down || {
     exit 1
 }
 
-# Install the Python package in development mode inside the container
-echo "Installing Python package..."
-docker compose run --rm django pip install -e . || {
-    echo "Failed to install Python package"
-    exit 1
-}
-
 # Build the Docker images
 echo "Building Docker images..."
 docker compose build --no-cache || {
