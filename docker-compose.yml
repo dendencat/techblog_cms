@@ -27,6 +27,7 @@ services:
       - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/conf.d
       - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
       - NGINX_HOST=localhost
+      - DOMAIN=${DOMAIN:-example.com}
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s
@@ -114,12 +115,13 @@ services:
     entrypoint: "/bin/sh"
     command: >
       -c 'trap exit TERM; while :; do 
-      certbot renew --webroot -w /var/www/certbot --deploy-hook "cp -fL /etc/letsencrypt/live/${DOMAIN:-blog.iohub.link}/* /etc/nginx/ssl/ && chmod 644 /etc/nginx/ssl/*.pem" --quiet && 
+      certbot renew --webroot -w /var/www/certbot --deploy-hook "cp -fL /etc/letsencrypt/live/${DOMAIN:-example.com}/* /etc/nginx/ssl/ && chmod 644 /etc/nginx/ssl/*.pem" --quiet && 
       sleep 12h & wait $${!}; 
       done'
     restart: unless-stopped
     environment:
-      - DOMAIN=blog.iohub.link
+      - DOMAIN=${DOMAIN:-example.com}
+      - EMAIL=${EMAIL:-admin@example.com}
 
 networks:
   techblog_network:

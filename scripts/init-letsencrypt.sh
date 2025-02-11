@@ -2,9 +2,15 @@
 
 set -e
 
-DOMAIN="blog.iohub.link"
-EMAIL="your@email.com"
-RSA_KEY_SIZE=4096
+# Load environment variables
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# Default values
+DOMAIN=${DOMAIN:-"localhost"}
+EMAIL=${EMAIL:-"your@email.com"}
+RSA_KEY_SIZE=${SSL_KEY_SIZE:-4096}
 
 # クリーンアップと権限設定
 echo "Setting up directories..."
