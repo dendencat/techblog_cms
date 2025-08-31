@@ -42,6 +42,11 @@ docker compose run --rm --entrypoint "\
     --cert-name $DOMAIN \
     -d $DOMAIN" certbot
 
+if [ $? -ne 0 ]; then
+    echo "Error: Certificate generation failed."
+    exit 1
+fi
+
 echo "Installing certificates..."
 docker compose run --rm --entrypoint "\
     sh -c 'cp -fL /etc/letsencrypt/live/$DOMAIN/* /etc/nginx/ssl/ && \
