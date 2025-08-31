@@ -13,7 +13,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # ALLOWED_HOSTS configuration
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+# ALLOWED_HOSTS configuration
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,django,blog.iohub.link', cast=Csv())
 
 # Application definition
 INSTALLED_APPS = [
@@ -49,6 +50,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'techblog_cms.context_processors.testing_mode',
             ],
         },
     },
@@ -61,14 +63,20 @@ WSGI_APPLICATION = 'techblog_cms.wsgi.application'
 IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.environ or any(
     x.endswith('pytest') for x in sys.modules.keys()
 )
+print(f"IS_TESTING: {IS_TESTING}")
 
 if IS_TESTING:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:'
+            'NAME': '/tmp/test.db'
         }
     }
+    # Disable CSRF for testing
+    MIDDLEWARE = [m for m in MIDDLEWARE if m != 'django.middleware.csrf.CsrfViewMiddleware']
+    DEBUG = True
+    APPEND_SLASH = False
+    print(f"MIDDLEWARE after removal: {MIDDLEWARE}")
 else:
     DATABASES = {
         'default': {

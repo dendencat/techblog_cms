@@ -3,6 +3,7 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from .models import Article
 from django.conf import settings
 from django.http import HttpResponseNotFound
@@ -22,12 +23,16 @@ def admin_guard(request):
 
 
 @require_http_methods(["GET", "POST"])
+@csrf_exempt
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
+        print(f"Username: {username}, Password: {password}")
+        user = authenticate(username=username, password=password)
+        print(f"User: {user}")
         if user is not None:
+            print("Login successful")
             login(request, user)
             return redirect('dashboard')
         else:

@@ -213,3 +213,9 @@ yarn-error.log*
 
 # System Files
 Thumbs.db
+
+# playwright image capture
+*.png
+
+# notes
+_note/
