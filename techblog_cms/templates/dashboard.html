@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>ダッシュボード</h1>
+    <div>
+      <a href="{% url 'article_new' %}" class="btn btn-success">新規記事</a>
+      <a href="{% url 'logout' %}" class="btn btn-secondary">ログアウト</a>
+    </div>
+  </div>
+  <section>
+    <h2>最近の記事</h2>
+    <ul class="recent-articles">
+      {% for a in recent_articles %}
+        <li>
+          <strong>{{ a.title }}</strong>
+          <small>{{ a.created_at|date:'Y-m-d H:i' }}</small>
+        </li>
+      {% empty %}
+        <li>記事がありません。</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

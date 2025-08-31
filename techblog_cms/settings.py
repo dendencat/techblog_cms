@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from decouple import config, Csv
 
@@ -56,7 +57,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'techblog_cms.wsgi.application'
 
 # Database
-if os.environ.get('TESTING') == 'True':
+# Detect testing mode either via explicit env var or when running under pytest
+IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.environ or any(
+    x.endswith('pytest') for x in sys.modules.keys()
+)
+
+if IS_TESTING:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -78,6 +84,15 @@ else:
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'techblog_cms', 'static'),
+]
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Admin hardening
+HIDE_ADMIN_URL = True
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

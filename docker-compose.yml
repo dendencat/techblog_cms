@@ -44,6 +44,8 @@ services:
     volumes:
       - .:/app
       - logs:/app/logs
+      - static_volume:/app/static
+      - media_volume:/app/media
     expose:
       - 8000
     environment:
