@@ -25,6 +25,7 @@ COPY . .
 # Create a non-root user to run the application.
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 RUN chown -R appuser:appgroup /app
+RUN mkdir -p /app/logs && chown -R appuser:appgroup /app/logs
 
 # Switch to the non-root user.
 USER appuser

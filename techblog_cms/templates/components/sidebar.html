@@ -1,0 +1,27 @@
+<aside class="sidebar w-full md:w-64 md:mr-8">
+    <div class="mb-8">
+        <h3 class="text-lg font-semibold mb-4">Categories</h3>
+        <ul class="space-y-2">
+            {% for category in categories %}
+            <li>
+                <a href="{% url 'category' slug=category.slug %}" 
+                   class="block text-gray-600 hover:text-gray-900">
+                    {{ category.name }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="mb-8">
+        <h3 class="text-lg font-semibold mb-4">Popular Tags</h3>
+        <div class="flex flex-wrap gap-2">
+            {% for tag in tags %}
+            <a href="{% url 'tag' slug=tag.slug %}" 
+               class="px-3 py-1 bg-gray-200 rounded-full text-sm text-gray-700 hover:bg-gray-300">
+                {{ tag.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</aside>

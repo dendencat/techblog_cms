@@ -56,16 +56,24 @@ TEMPLATES = [
 WSGI_APPLICATION = 'techblog_cms.wsgi.application'
 
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'techblogdb'),
-        'USER': os.environ.get('POSTGRES_USER', 'techblog'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'techblogpass'),
-        'HOST': 'db',
-        'PORT': '5432',
+if os.environ.get('TESTING') == 'True':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:'
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('POSTGRES_DB', 'techblogdb'),
+            'USER': os.environ.get('POSTGRES_USER', 'techblog'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'techblogpass'),
+            'HOST': 'db',
+            'PORT': '5432',
+        }
+    }
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'

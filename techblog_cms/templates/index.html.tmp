@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{{ blog_title }}{% endblock %}</title>
+  <!-- Tailwind CSS CDN (最新版を利用) -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.0/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100">
+
+  <!-- ヘッダー 🚀 -->
+  <header class="bg-white shadow p-4 flex items-center justify-between">
+    <div class="text-2xl font-bold">{% block blog_title %}My Awesome Blog{% endblock %}</div>
+    <div class="flex-1 mx-4">
+      <input type="text" id="searchBox" placeholder="記事を検索..." class="w-full px-4 py-2 border rounded" />
+    </div>
+    <div>
+      <button class="px-4 py-2 bg-blue-500 text-white rounded">Login / Register</button>
+    </div>
+  </header>
+
+  <div class="container mx-auto mt-6 flex">
+    <!-- サイドバー 📚 -->
+    <aside class="w-1/4 px-4">
+      <!-- フォロー記事 -->
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-2">Follow Articles</h2>
+        <ul id="followLinks" class="list-disc pl-5">
+          <li><a href="#" class="text-blue-500 hover:underline">Article 1</a></li>
+          <li><a href="#" class="text-blue-500 hover:underline">Article 2</a></li>
+          <li><a href="#" class="text-blue-500 hover:underline">Article 3</a></li>
+        </ul>
+      </div>
+      <!-- トレンド記事 -->
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-2">Trending Articles</h2>
+        <ul id="trendingLinks" class="list-disc pl-5">
+          <li><a href="#" class="text-blue-500 hover:underline">Trending 1</a></li>
+          <li><a href="#" class="text-blue-500 hover:underline">Trending 2</a></li>
+          <li><a href="#" class="text-blue-500 hover:underline">Trending 3</a></li>
+        </ul>
+      </div>
+      <!-- カテゴリ -->
+      <div>
+        <h2 class="text-xl font-semibold mb-2">Categories</h2>
+        <ul id="categoryLinks" class="list-disc pl-5">
+          <li><a href="#" class="text-blue-500 hover:underline">Category 1</a></li>
+          <li><a href="#" class="text-blue-500 hover:underline">Category 2</a></li>
+          <li><a href="#" class="text-blue-500 hover:underline">Category 3</a></li>
+          <li><a href="#" class="text-blue-500 hover:underline">Category 4</a></li>
+          <li><a href="#" class="text-blue-500 hover:underline">Category 5</a></li>
+          <li><a href="#" class="text-blue-500 hover:underline">Category 6</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- メインコンテンツ 📰 -->
+    <main class="flex-1 px-4">
+      <!-- 3カラムグリッドで記事を表示 -->
+      <div id="articlesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- 各記事ボックスは動的に追加される -->
+      </div>
+      <!-- Infinite Scroll のための Sentinel -->
+      <div id="scrollSentinel" class="h-8"></div>
+    </main>
+  </div>
+
+  <!-- JavaScript 部分 🎯 -->
+  <script>
+    // 記事データのシミュレーション
+    let articlesData = [];
+    let currentPage = 1;
+    const articlesPerPage = 9;
+
+    /**
+     * 記事をフェッチするシミュレーション関数
+     * 実際には AJAX などで JSON データを取得してください
+     */
+    function fetchArticles(page) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const newArticles = [];
+          for (let i = 1; i <= articlesPerPage; i++) {
+            const articleId = (page - 1) * articlesPerPage + i;
+            newArticles.push({
+              id: articleId,
+              title: 'Article Title ' + articleId,
+              excerpt: 'This is a summary of article ' + articleId + '.',
+              link: '#'
+            });
+          }
+          resolve(newArticles);
+        }, 500);
+      });
+    }
+
+    // 記事をグリッドにレンダリング
+    function renderArticles(articles) {
+      const articlesGrid = document.getElementById('articlesGrid');
+      articles.forEach(article => {
+        const articleBox = document.createElement('div');
+        articleBox.className = 'bg-white p-4 rounded shadow hover:shadow-lg transition duration-200';
+        articleBox.innerHTML = `
+          <h3 class="text-xl font-bold mb-2">${article.title}</h3>
+          <p class="text-gray-700 mb-4">${article.excerpt}</p>
+          <a href="${article.link}" class="text-blue-500 hover:underline">Read More</a>
+        `;
+        articlesGrid.appendChild(articleBox);
+      });
+    }
+
+    // 次のページの記事を読み込む
+    async function loadMoreArticles() {
+      const newArticles = await fetchArticles(currentPage);
+      articlesData = articlesData.concat(newArticles);
+      renderArticles(newArticles);
+      currentPage++;
+    }
+
+    // 検索ボックスによる記事フィルタリング
+    function filterArticles(query) {
+      const filtered = articlesData.filter(article => 
+        article.title.toLowerCase().includes(query.toLowerCase()) || 
+        article.excerpt.toLowerCase().includes(query.toLowerCase())
+      );
+      const articlesGrid = document.getElementById('articlesGrid');
+      articlesGrid.innerHTML = '';
+      renderArticles(filtered);
+    }
+
+    // 検索ボックスのイベントリスナー
+    document.getElementById('searchBox').addEventListener('input', (e) => {
+      const query = e.target.value;
+      if(query.trim() === '') {
+        // 検索が空ならすべての記事を再描画
+        document.getElementById('articlesGrid').innerHTML = '';
+        renderArticles(articlesData);
+      } else {
+        filterArticles(query);
+      }
+    });
+
+    // Intersection Observer による Infinite Scroll の実装
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          loadMoreArticles();
+        }
+      });
+    }, {
+      root: null,
+      rootMargin: '0px',
+      threshold: 1.0
+    });
+
+    // Sentinel の監視開始
+    observer.observe(document.getElementById('scrollSentinel'));
+
+    // 初期ロード
+    loadMoreArticles();
+  </script>
+</body>
+</html>

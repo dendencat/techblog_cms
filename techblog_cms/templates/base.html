@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TechBlog CMS{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    {% block header %}
+        {% include 'components/header.html' %}
+    {% endblock %}
+
+    <div class="container mx-auto mt-6 px-4">
+        <div class="flex flex-col md:flex-row">
+            {% block sidebar %}
+                {% include 'components/sidebar.html' %}
+            {% endblock %}
+            
+            {% block content %}
+                {% include 'components/main_content.html' %}
+            {% endblock %}
+        </div>
+    </div>
+
+    {% block scripts %}
+    <script src="{% static 'js/article.js' %}"></script>
+    {% endblock %}
+</body>
+</html>
