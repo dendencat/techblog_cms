@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ article.title }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6" style="max-width: 60vw; margin: 40px auto;">
+    <article>
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ article.title }}</h1>
+            <div class="text-sm text-gray-500">
+                <span>Published: {{ article.created_at|date:"M d, Y" }}</span>
+                {% if article.category %}
+                <span class="ml-4">Category: 
+                    <a href="{% url 'category' article.category.slug %}" class="text-blue-500 hover:underline">
+                        {{ article.category.name }}
+                    </a>
+                </span>
+                {% endif %}
+            </div>
+        </header>
+
+        <div class="prose max-w-none">
+            {% if article.excerpt and article.excerpt != article.content %}
+            <div class="text-gray-600 italic mb-4">
+                {{ article.excerpt }}
+            </div>
+            {% endif %}
+            
+            <div class="text-gray-800 leading-relaxed">
+                {{ article.content|linebreaks }}
+            </div>
+        </div>
+
+        {% if article.tags.all %}
+        <footer class="mt-8 pt-4 border-t border-gray-200">
+            <div class="flex flex-wrap gap-2">
+                {% for tag in article.tags.all %}
+                <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                    #{{ tag.name }}
+                </span>
+                {% endfor %}
+            </div>
+        </footer>
+        {% endif %}
+    </article>
+
+    <div class="mt-8">
+        <a href="{% url 'dashboard' %}" class="text-blue-500 hover:underline">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

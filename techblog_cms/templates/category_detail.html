@@ -1,13 +1,15 @@
 {% extends 'base.html' %}
 
-{% block title %}Tech Blog - Home{% endblock %}
+{% block title %}{{ category.name }} - {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="bg-white rounded-lg shadow-md p-6">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Welcome to Tech Blog</h1>
-    <p class="text-gray-600 mb-8">Explore the latest in technology and innovation.</p>
+    <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ category.name }}</h1>
+    {% if category.description %}
+    <p class="text-gray-600 mb-6">{{ category.description }}</p>
+    {% endif %}
 
-    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Latest Articles</h2>
+    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Articles in this category</h2>
     <div class="space-y-4">
         {% for article in articles %}
         <div class="border-b border-gray-200 pb-4">
@@ -17,22 +19,15 @@
             <p class="text-gray-600 mt-2">{{ article.excerpt|truncatewords:30 }}</p>
             <div class="text-sm text-gray-500 mt-2">
                 <span>Published: {{ article.created_at|date:"M d, Y" }}</span>
-                {% if article.category %}
-                <span class="ml-4">Category: {{ article.category.name }}</span>
-                {% endif %}
             </div>
         </div>
         {% empty %}
-        <p class="text-gray-500">No articles published yet.</p>
+        <p class="text-gray-500">No articles in this category yet.</p>
         {% endfor %}
     </div>
 
-    {% if user.is_authenticated %}
     <div class="mt-8">
-        <a href="{% url 'dashboard' %}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">
-            Go to Dashboard
-        </a>
+        <a href="{% url 'categories' %}" class="text-blue-500 hover:underline">← Back to Categories</a>
     </div>
-    {% endif %}
 </div>
 {% endblock %}

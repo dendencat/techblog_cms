@@ -6,11 +6,17 @@ from django.conf.urls.static import static
 from . import views
 
 urlpatterns = [
-    path('', TemplateView.as_view(template_name='home.html'), name='home'),
+    path('', views.home_view, name='home'),
+    path('articles/', views.article_list_view, name='article_list'),
+    path('articles/<slug:slug>/', views.article_detail_view, name='article_detail'),
+    path('categories/', views.categories_view, name='categories'),
+    path('categories/<slug:slug>/', views.category_view, name='category'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('dashboard/articles/new/', views.article_editor_view, name='article_new'),
+    path('dashboard/articles/<slug:slug>/delete/', views.article_delete_view, name='article_delete'),
+    path('dashboard/articles/delete/success/', views.article_delete_success_view, name='article_delete_success'),
     path('api/health/', views.health_check, name='health_check'),
     path('admin/', views.admin_guard, name='admin_guard'),
 ]
