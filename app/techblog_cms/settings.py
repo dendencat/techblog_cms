@@ -8,7 +8,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security settings
 SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -57,11 +60,11 @@ if DATABASE_URL:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": parsed_url.path[1:],
+            "NAME": (parsed_url.path or "/")[1:],
             "USER": parsed_url.username,
             "PASSWORD": parsed_url.password,
             "HOST": parsed_url.hostname,
-            "PORT": parsed_url.port or "5432",
+            "PORT": str(parsed_url.port or "5432"),
         }
     }
 else:
@@ -71,7 +74,7 @@ else:
             "NAME": os.environ.get("DB_NAME", "postgres"),
             "USER": os.environ.get("DB_USER", "postgres"),
             "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-            "HOST": os.environ.get("DB_HOST", "localhost"),
+            "HOST": os.environ.get("DB_HOST", "db"),  # docker-compose を想定
             "PORT": os.environ.get("DB_PORT", "5432"),
         }
     }
