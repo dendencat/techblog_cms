@@ -14,6 +14,8 @@ services:
     environment:
       DEBUG: 'True'
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,staging.example.com}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       
   db:
     ports:
@@ -22,3 +24,6 @@ services:
   redis:
     ports:
       - "6380:6379"  # 本番環境と異なるポートを使用
+    command: redis-server --requirepass $REDIS_PASSWORD
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
