@@ -1,24 +1,33 @@
-from django.core.management.base import BaseCommand
+import os
+import sys
+from pathlib import Path
+
+import django
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.append(str(BASE_DIR / "app"))
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "techblog_cms.settings")
+django.setup()
+
 from techblog_cms.models import Category, Tag, Article
 
+
 def create_initial_data():
-    # カテゴリーの作成
-    categories = [
-        Category.objects.create(name="Programming", description="Programming related articles"),
-        Category.objects.create(name="Infrastructure", description="Infrastructure and DevOps"),
-        Category.objects.create(name="Design", description="UI/UX Design topics")
-    ]
+    """Create sample categories and tags."""
+    Category.objects.create(
+        name="Programming", description="Programming related articles"
+    )
+    Category.objects.create(
+        name="Infrastructure", description="Infrastructure and DevOps"
+    )
+    Category.objects.create(name="Design", description="UI/UX Design topics")
 
-    # タグの作成
-    tags = [
-        Tag.objects.create(name="Python"),
-        Tag.objects.create(name="Django"),
-        Tag.objects.create(name="Docker"),
-    ]
+    Tag.objects.create(name="Python")
+    Tag.objects.create(name="Django")
+    Tag.objects.create(name="Docker")
 
-class Command(BaseCommand):
-    help = 'Creates initial test data'
 
-    def handle(self, *args, **kwargs):
-        create_initial_data()
-        self.stdout.write(self.style.SUCCESS('Successfully created test data'))
+if __name__ == "__main__":
+    create_initial_data()
+    print("Successfully created test data")
