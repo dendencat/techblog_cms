@@ -36,24 +36,24 @@ echo "Database is available!"
 # データベースマイグレーションの実行
 # -------------------------------------------
 echo "Creating migrations..."
-sudo -u appuser -E python manage.py makemigrations
+python manage.py makemigrations
 
 echo "Applying migrations..."
-sudo -u appuser -E python manage.py migrate
+python manage.py migrate
 
 # -------------------------------------------
 # 開発環境の場合はマイグレーションファイルの作成とテストデータの作成
 # -------------------------------------------
 if [ "$DJANGO_ENV" = "development" ]; then
     echo "Creating test data..."
-    sudo -u appuser -E python manage.py create_test_data || true
+    python manage.py create_test_data || true
 fi
 
 # -------------------------------------------
 # 静的ファイルの収集
 # -------------------------------------------
 echo "Collecting static files..."
-sudo -u appuser -E python manage.py collectstatic --noinput
+python manage.py collectstatic --noinput
 
 # -------------------------------------------
 # 静的ファイルディレクトリの作成と権限設定
@@ -63,13 +63,15 @@ chown -R appuser:appgroup /app/static || true
 chmod -R 755 /app/static || true
 
 # -------------------------------------------
-# Gunicorn の起動（標準出力にログを出力）
+# Gunicorn の起動（appuserとして実行）
 # -------------------------------------------
 echo "Starting Gunicorn as appuser..."
-exec sudo -u appuser -E bash -lc 'exec gunicorn techblog_cms.wsgi:application \
+exec gunicorn techblog_cms.wsgi:application \
     --bind 0.0.0.0:8000 \
     --log-level debug \
     --access-logfile - \
     --error-logfile - \
     --capture-output \
-    --workers 3'
+    --workers 3 \
+    --user appuser \
+    --group appgroup

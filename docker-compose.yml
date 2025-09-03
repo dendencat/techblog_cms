@@ -52,14 +52,15 @@ services:
     expose:
       - 8000
     environment:
-      SECRET_KEY: ${SECRET_KEY}  # Require a strong secret key via env
+      SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,blog.iohub.link}
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # Prefer passing through DATABASE_URL from .env to avoid duplication
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       DJANGO_SETTINGS_MODULE: techblog_cms.settings
       PYTHONPATH: /app
-      TESTING: 'True'
+      DJANGO_ENV: production
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       - db
@@ -81,10 +82,15 @@ services:
     image: postgres:16-alpine
     volumes:
       - db_data:/var/lib/postgresql/data # Persist data
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Optional app-specific DB credentials used by init-db.sh
+      APP_DB_USER: ${APP_DB_USER:-}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-}
+      APP_DB_NAME: ${APP_DB_NAME:-}
     networks:
       - techblog_network
     restart: always
@@ -100,7 +106,7 @@ services:
   # Caching - Redis
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass $REDIS_PASSWORD
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     networks:
@@ -125,7 +131,7 @@ services:
     networks:
       - techblog_network
     restart: unless-stopped
-    user: nginx
+    user: root
     deploy:
       resources:
         limits:

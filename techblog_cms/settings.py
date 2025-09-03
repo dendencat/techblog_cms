@@ -2,6 +2,7 @@ import os
 import sys
 from pathlib import Path
 from decouple import config, Csv
+from urllib.parse import urlparse, unquote
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -66,14 +67,15 @@ IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.
 print(f"IS_TESTING: {IS_TESTING}")
 
 if IS_TESTING:
+    # Testing uses explicit env vars to keep CI simple
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ.get('POSTGRES_DB', 'techblogdb'),
             'USER': os.environ.get('POSTGRES_USER', 'techblog'),
             'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'techblogpass'),
-            'HOST': 'db',
-            'PORT': '5432',
+            'HOST': os.environ.get('POSTGRES_HOST', 'db'),
+            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
         }
     }
     # Disable CSRF for testing
@@ -82,16 +84,44 @@ if IS_TESTING:
     APPEND_SLASH = False
     print(f"MIDDLEWARE after removal: {MIDDLEWARE}")
 else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB', 'techblogdb'),
-            'USER': os.environ.get('POSTGRES_USER', 'techblog'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'techblogpass'),
-            'HOST': 'db',
-            'PORT': '5432',
+    # Prefer DATABASE_URL when provided (12factor style)
+    db_url = os.environ.get('DATABASE_URL')
+    if db_url:
+        parsed = urlparse(db_url)
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': parsed.path.lstrip('/') or os.environ.get('APP_DB_NAME') or os.environ.get('POSTGRES_DB', 'techblogdb'),
+                'USER': unquote(parsed.username or os.environ.get('APP_DB_USER') or os.environ.get('POSTGRES_USER', 'techblog')),
+                'PASSWORD': unquote(parsed.password or os.environ.get('APP_DB_PASSWORD') or os.environ.get('POSTGRES_PASSWORD', 'techblogpass')),
+                'HOST': parsed.hostname or os.environ.get('POSTGRES_HOST', 'db'),
+                'PORT': str(parsed.port or os.environ.get('POSTGRES_PORT', '5432')),
+            }
         }
-    }
+    elif os.environ.get('APP_DB_USER') or os.environ.get('APP_DB_NAME') or os.environ.get('APP_DB_PASSWORD'):
+        # Next preference: dedicated app credentials if provided
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.environ.get('APP_DB_NAME', os.environ.get('POSTGRES_DB', 'techblogdb')),
+                'USER': os.environ.get('APP_DB_USER', os.environ.get('POSTGRES_USER', 'techblog')),
+                'PASSWORD': os.environ.get('APP_DB_PASSWORD', os.environ.get('POSTGRES_PASSWORD', 'techblogpass')),
+                'HOST': os.environ.get('POSTGRES_HOST', 'db'),
+                'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            }
+        }
+    else:
+        # Fallback to generic POSTGRES_* variables
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.environ.get('POSTGRES_DB', 'techblogdb'),
+                'USER': os.environ.get('POSTGRES_USER', 'techblog'),
+                'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'techblogpass'),
+                'HOST': os.environ.get('POSTGRES_HOST', 'db'),
+                'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            }
+        }
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
