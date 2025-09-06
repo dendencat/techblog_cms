@@ -121,14 +121,18 @@ def article_delete_success_view(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def article_editor_view(request):
+def article_editor_view(request, slug=None):
+    article = None
+    if slug:
+        article = get_object_or_404(Article, slug=slug)
+    
     if request.method == 'POST':
         title = request.POST.get('title')
         content = request.POST.get('content')
         action = request.POST.get('action')  # 'save' or 'publish'
         
         if not title or not content:
-            return render(request, 'article_editor.html', {"error": "タイトルと本文は必須です。"})
+            return render(request, 'article_editor.html', {"error": "タイトルと本文は必須です。", "article": article})
         
         # デフォルトのカテゴリを取得（存在しない場合は作成）
         category, created = Category.objects.get_or_create(
@@ -136,16 +140,24 @@ def article_editor_view(request):
             defaults={'description': 'General articles'}
         )
         
-        # 記事作成時にカテゴリを指定
-        published = action == 'publish'
-        article = Article.objects.create(
-            title=title, 
-            content=content,
-            category=category,
-            published=published  # アクションに応じて公開状態を設定
-        )
+        if article:
+            # 編集モード
+            article.title = title
+            article.content = content
+            article.published = action == 'publish'
+            article.save()
+        else:
+            # 新規作成モード
+            published = action == 'publish'
+            article = Article.objects.create(
+                title=title, 
+                content=content,
+                category=category,
+                published=published  # アクションに応じて公開状態を設定
+            )
         return redirect('dashboard')
-    return render(request, 'article_editor.html')
+    
+    return render(request, 'article_editor.html', {"article": article})
 
 
 @login_required

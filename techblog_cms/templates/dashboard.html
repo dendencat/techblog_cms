@@ -216,6 +216,14 @@
             {% if not a.published %}
               <span style="background-color: #6b7280; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">下書き</span>
             {% endif %}
+            <a href="{% url 'article_edit' a.slug %}"
+               class="edit-btn"
+               style="color: #007bff; background: none; border: none; cursor: pointer; padding: 5px; border-radius: 3px; transition: background-color 0.2s; text-decoration: none;"
+               onmouseover="this.style.backgroundColor='#e7f3ff'"
+               onmouseout="this.style.backgroundColor='transparent'"
+               title="記事を編集">
+              <i class="ti ti-edit" style="font-size: 18px;"></i>
+            </a>
             <button type="button"
                     class="delete-btn"
                     data-article-id="{{ a.id }}"
