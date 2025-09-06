@@ -12,9 +12,7 @@
     {% endif %}
 
     <form method="post" id="articleForm" action="{% url 'article_new' %}" class="flex flex-col h-full">
-      {% if not IS_TESTING %}
       {% csrf_token %}
-      {% endif %}
 
       <div class="form-group mb-4">
         <label for="title" class="font-bold">タイトル</label>
@@ -160,9 +158,13 @@ function debounce(fn, delay) {
 
 async function serverRenderMarkdown(markdown) {
   try {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const resp = await fetch('/api/preview_markdown/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrfToken
+      },
       body: 'text=' + encodeURIComponent(markdown || '')
     });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);

@@ -8,9 +8,7 @@
   <div class="alert alert-danger">{{ error }}</div>
   {% endif %}
   <form method="post">
-    {% if not IS_TESTING %}
     {% csrf_token %}
-    {% endif %}
     <div class="form-group">
       <label for="username">ユーザー名</label>
       <input id="username" name="username" type="text" class="form-control" required />

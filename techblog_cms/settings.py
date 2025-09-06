@@ -1,14 +1,27 @@
 import os
 import sys
+import logging
 from pathlib import Path
 from decouple import config, Csv
 from urllib.parse import urlparse, unquote
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+# Check if SECRET_KEY is set
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable is not set. Please set a secure secret key.")
+
+# Fallback for development (but warn)
+if SECRET_KEY == 'django-insecure-default-key':
+    import warnings
+    warnings.warn("Using insecure default SECRET_KEY. Set SECRET_KEY environment variable for production.")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
@@ -64,7 +77,7 @@ WSGI_APPLICATION = 'techblog_cms.wsgi.application'
 IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.environ or any(
     x.endswith('pytest') for x in sys.modules.keys()
 )
-print(f"IS_TESTING: {IS_TESTING}")
+logger.info(f"IS_TESTING: {IS_TESTING}")
 
 if IS_TESTING:
     # Testing uses explicit env vars to keep CI simple
@@ -82,7 +95,7 @@ if IS_TESTING:
     MIDDLEWARE = [m for m in MIDDLEWARE if m != 'django.middleware.csrf.CsrfViewMiddleware']
     DEBUG = True
     APPEND_SLASH = False
-    print(f"MIDDLEWARE after removal: {MIDDLEWARE}")
+    logger.info(f"MIDDLEWARE after removal: {MIDDLEWARE}")
 else:
     # Prefer DATABASE_URL when provided (12factor style)
     db_url = os.environ.get('DATABASE_URL')

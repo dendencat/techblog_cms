@@ -50,16 +50,12 @@ def admin_guard(request):
 
 
 @require_http_methods(["GET", "POST"])
-@csrf_exempt
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        print(f"Username: {username}, Password: {password}")
         user = authenticate(username=username, password=password)
-        print(f"User: {user}")
         if user is not None:
-            print("Login successful")
             login(request, user)
             return redirect('dashboard')
         else:
@@ -163,12 +159,10 @@ def article_editor_view(request):
 
 @login_required
 @require_http_methods(["POST"]) 
-@csrf_exempt
 def preview_markdown_view(request):
     """Render markdown to HTML for live preview using the same pipeline as production.
 
     Notes:
-    - CSRF exempt to simplify AJAX preview while authenticated.
     - Returns JSON: { html: "<rendered>" }
     """
     text = request.POST.get('text', '') or ''

@@ -1,13 +1,14 @@
 import markdown
 from django import template
 from django.utils.safestring import mark_safe
+import bleach
 
 register = template.Library()
 
 @register.filter
 def markdown_to_html(text):
     """
-    Convert markdown text to HTML
+    Convert markdown text to HTML with Pygments for syntax highlighting and bleach for sanitization
     """
     if not text:
         return ''
@@ -28,4 +29,25 @@ def markdown_to_html(text):
         }
     })
 
-    return mark_safe(html)
+    # Sanitize HTML to prevent XSS attacks
+    allowed_tags = [
+        'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img', 'table',
+        'thead', 'tbody', 'tr', 'th', 'td', 'div', 'span'
+    ]
+    allowed_attributes = {
+        'a': ['href', 'title'],
+        'img': ['src', 'alt', 'title'],
+        'code': ['class'],
+        'pre': ['class'],
+        'div': ['class'],
+        'span': ['class'],
+        'table': ['class'],
+        'th': ['class'],
+        'td': ['class'],
+        'tr': ['class']
+    }
+
+    sanitized_html = bleach.clean(html, tags=allowed_tags, attributes=allowed_attributes, strip=True)
+
+    return mark_safe(sanitized_html)
