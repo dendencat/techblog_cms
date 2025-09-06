@@ -13,16 +13,39 @@ model: Grok Code Fast 1 (Preview)
 ### 全体アーキテクチャ
 - **Webフレームワーク**: Django 4.2を使用。WSGIアプリケーションとしてGunicornで実行。
 - **コンテナ化**: Docker Composeで複数サービスを管理（Djangoアプリ、Nginx、PostgreSQL、Redis、Certbot）。
-- **セキュリティ**: HTTPS強制、セキュリティヘッダー、環境変数による設定管理。
+- **セキュリティ**: HTTPS強制、セキュリティヘッダー、CSRF保護、環境変数による設定管理、強力なパスワード要件。
 - **CI/CD**: GitHub Actionsでテスト、ビルド、脆弱性スキャン（Trivy）を自動化。
 - **テスト**: pytestを使用したユニットテストと統合テスト。
 
 ### 主要コンポーネントの解説
 1. **Djangoアプリケーション (techblog_cms/)**:
-   - **ビュー (techblog_cms/views.py)**: `health_check`関数でJSONレスポンスを返し、`index`関数でテンプレートレンダリング。基本的なエンドポイントを提供。
-   - **URL設定 (techblog_cms/urls.py)**: `/admin/`でDjango管理画面、`/`でホーム画面をマッピング。
-   - **設定 (techblog_cms/settings.py)**: 環境変数でDEBUG、ALLOWED_HOSTS、DB接続を制御。PostgreSQLとRedisを統合。
-   - **テンプレート**: techblog_cms/templates/home.htmlでシンプルなHTMLページを提供。静的ファイルはstatic/index.htmlでTailwind CSSを使用したモダンなUI。
+   - **モデル (techblog_cms/models.py)**: Category, Tag, Articleモデルを実装。記事の作成・管理、カテゴリ分類、タグ付け機能をサポート。
+   - **ビュー (techblog_cms/views.py)**: 
+     - `health_check`: JSONレスポンスでヘルスチェック。
+     - `home_view`: 公開記事のトップ10を表示。
+     - `article_list_view`: 全公開記事を表示。
+     - `categories_view`: カテゴリ一覧を表示。
+     - `category_view`: カテゴリ別記事を表示。
+     - `article_detail_view`: 記事詳細を表示（ログイン時は下書きも表示）。
+     - `login_view`: ユーザー認証（CSRF保護付き）。
+     - `logout_view`: ログアウト処理。
+     - `dashboard_view`: 管理ダッシュボード（ページネーション付き記事一覧）。
+     - `article_editor_view`: 記事作成・編集。
+     - `article_delete_view`: 記事削除。
+     - `admin_guard`: 管理画面アクセス制御。
+   - **URL設定 (techblog_cms/urls.py)**: 記事管理、カテゴリ、ログイン/ログアウト、管理画面などのURLマッピング。
+   - **設定 (techblog_cms/settings.py)**: 環境変数でDEBUG、ALLOWED_HOSTS、DB接続を制御。PostgreSQLとRedisを統合。テストモードでのCSRF無効化。
+   - **テンプレート**: 
+     - `home.html`: ホーム画面。
+     - `article_list.html`: 記事一覧。
+     - `category_list.html`: カテゴリ一覧。
+     - `category_detail.html`: カテゴリ詳細。
+     - `article_detail.html`: 記事詳細。
+     - `login.html`: ログインフォーム。
+     - `dashboard.html`: 管理ダッシュボード（ページネーション付き）。
+     - `article_editor.html`: 記事編集フォーム。
+     - `article_delete_confirm.html`: 削除確認。
+     - `article_delete_success.html`: 削除成功。
    - **WSGI (techblog_cms/wsgi.py)**: Djangoアプリのエントリーポイント。
 
 2. **Docker設定**:
@@ -48,7 +71,7 @@ model: Grok Code Fast 1 (Preview)
    - **環境設定 (.env.example)**: 秘密鍵やDB接続を環境変数で管理。
    - **ドキュメント (README.md)**: セットアップ手順、技術スタック、ライセンスを記載。
 
-この実装は、プロダクションレディなDjangoアプリのベストプラクティスを反映しており、セキュリティとスケーラビリティを重視しています。追加の機能（例: ブログ投稿モデル）を実装するには、techblog_cms/models.py（未提供）を追加してください。
+この実装は、プロダクションレディなDjangoアプリのベストプラクティスを反映しており、セキュリティとスケーラビリティを重視しています。記事管理機能、ページネーション、ユーザー認証、CSRF保護などの機能を備えています。
 </assistant>
 <user>
 AIへの指示とレポジトリの理解のため、AGENTS.mdの作成を行ってください。

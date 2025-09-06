@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Categories - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">Categories</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for category in categories %}
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-2">
+                <a href="{% url 'category' slug=category.slug %}" 
+                   class="text-gray-900 hover:text-blue-600">
+                    {{ category.name }}
+                </a>
+            </h2>
+            {% if category.description %}
+            <p class="text-gray-600 mb-4">{{ category.description }}</p>
+            {% endif %}
+            <div class="text-sm text-gray-500">
+                {% with article_count=category.article_set.count %}
+                {{ article_count }} article{{ article_count|pluralize }}
+                {% endwith %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center text-gray-500 py-8">
+            No categories found.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

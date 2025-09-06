@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="delete-success" style="max-width: 500px; margin: 40px auto; padding: 20px; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center;">
+  <div style="color: #28a745; font-size: 48px; margin-bottom: 20px;">✓</div>
+  <h2 style="color: #28a745; margin-bottom: 20px;">記事を削除しました</h2>
+  
+  <p style="color: #666; margin-bottom: 30px;">
+    記事の削除が完了しました。
+  </p>
+  
+  <div class="button-group">
+    <a href="{% url 'dashboard' %}" class="btn btn-primary" style="padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; display: inline-block;">
+      ダッシュボードに戻る
+    </a>
+  </div>
+</div>
+{% endblock %}

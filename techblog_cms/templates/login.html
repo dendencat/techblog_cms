@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block header %}{% endblock %}
+{% block sidebar %}{% endblock %}
+{% block content %}
+<div class="auth-container">
+  <h1>ログイン</h1>
+  {% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+  <form method="post">
+    {% if not IS_TESTING %}
+    {% csrf_token %}
+    {% endif %}
+    <div class="form-group">
+      <label for="username">ユーザー名</label>
+      <input id="username" name="username" type="text" class="form-control" required />
+    </div>
+    <div class="form-group">
+      <label for="password">パスワード</label>
+      <input id="password" name="password" type="password" class="form-control" required />
+    </div>
+    <button type="submit" class="btn btn-primary">ログイン</button>
+  </form>
+</div>
+{% endblock %}

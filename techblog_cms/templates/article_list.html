@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Articles - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">All Articles</h1>
+
+    <div class="space-y-4">
+        {% for article in articles %}
+        <div class="border-b border-gray-200 pb-4">
+            <h3 class="text-xl font-semibold text-blue-600 hover:text-blue-800">
+                <a href="{% url 'article_detail' article.slug %}">{{ article.title }}</a>
+            </h3>
+            <p class="text-gray-600 mt-2">{{ article.excerpt|truncatewords:30 }}</p>
+            <div class="text-sm text-gray-500 mt-2">
+                <span>Published: {{ article.created_at|date:"M d, Y" }}</span>
+                {% if article.category %}
+                <span class="ml-4">Category: {{ article.category.name }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-gray-500">No articles published yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="delete-confirm" style="max-width: 500px; margin: 40px auto; padding: 20px; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+  <h2 style="color: #dc3545; margin-bottom: 20px;">記事の削除</h2>
+  
+  <div class="article-info" style="background-color: white; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+    <h3 style="margin: 0 0 10px 0; color: #333;">{{ article.title }}</h3>
+    <p style="margin: 0; color: #666; font-size: 14px;">
+      作成日: {{ article.created_at|date:'Y年m月d日 H:i' }}<br>
+      {% if article.published %}
+        状態: 公開中
+      {% else %}
+        状態: 下書き
+      {% endif %}
+    </p>
+  </div>
+  
+  <p style="color: #666; margin-bottom: 20px;">
+    この記事を削除してもよろしいですか？<br>
+    この操作は取り消すことができません。
+  </p>
+  
+  <div class="button-group" style="display: flex; gap: 10px; justify-content: center;">
+    <form method="post" style="display: inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger" style="padding: 10px 20px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        はい、削除する
+      </button>
+    </form>
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary" style="padding: 10px 20px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 4px;">
+      キャンセル
+    </a>
+  </div>
+</div>
+{% endblock %}

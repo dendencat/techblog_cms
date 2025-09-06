@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   # Load Balancer - Nginx
   nginx:
@@ -27,6 +25,11 @@ services:
       - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/conf.d
       - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
       - NGINX_HOST=localhost
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s
@@ -40,26 +43,36 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.django
-    command: gunicorn techblog_cms.wsgi:application --bind 0.0.0.0:8000 --error-logfile - --capture-output --log-level debug
     volumes:
       - .:/app
       - logs:/app/logs
+      - static_volume:/app/static
+      - media_volume:/app/media
     expose:
       - 8000
     environment:
-      SECRET_KEY: ${SECRET_KEY:-somesecretkey}  # Replace with a strong secret key
+      SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,blog.iohub.link}
-      DATABASE_URL: postgres://${POSTGRES_USER:-techblog}:${POSTGRES_PASSWORD:-techblogpass}@db:5432/${POSTGRES_DB:-techblogdb}
-      REDIS_URL: redis://redis:6379/0
+      # Prefer passing through DATABASE_URL from .env to avoid duplication
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       DJANGO_SETTINGS_MODULE: techblog_cms.settings
       PYTHONPATH: /app
+      DJANGO_ENV: production
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       - db
       - redis
     networks:
       - techblog_network
     restart: always
+    user: appuser
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
     # Security: Runs the application as a non-root user.
     # Environment variables for sensitive settings.
 
@@ -68,27 +81,42 @@ services:
     image: postgres:16-alpine
     volumes:
       - db_data:/var/lib/postgresql/data # Persist data
-    ports:
-      - "5432:5432"
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-techblog}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-techblogpass}
-      POSTGRES_DB: ${POSTGRES_DB:-techblogdb}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Optional app-specific DB credentials used by init-db.sh
+      APP_DB_USER: ${APP_DB_USER:-}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-}
+      APP_DB_NAME: ${APP_DB_NAME:-}
     networks:
       - techblog_network
     restart: always
+    user: postgres
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
     # Security: Uses a specific PostgreSQL version.
     # Environment variables for credentials.
 
   # Caching - Redis
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass your_redis_password # Set a password
-    ports:
-      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     networks:
       - techblog_network
     restart: always
+    user: redis
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
     # Security: Requires a password for authentication.
     # Consider network restrictions for enhanced security.
 
@@ -102,6 +130,12 @@ services:
     networks:
       - techblog_network
     restart: unless-stopped
+    user: root
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
 
   certbot:
     image: certbot/certbot:latest

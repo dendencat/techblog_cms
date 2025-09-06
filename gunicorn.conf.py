@@ -12,8 +12,8 @@ timeout = 120
 keepalive = 5
 
 # Path configurations
-pythonpath = current_dir
-chdir = current_dir
+pythonpath = '/app'
+chdir = '/app'
 wsgi_app = 'techblog_cms.wsgi:application'  # Updated WSGI path
 
 # Logging

@@ -1,16 +1,16 @@
 import os
 import pytest
+import django
 from django.conf import settings
 
 def pytest_configure():
     """Configure Django settings for tests"""
-    settings.DEBUG = False
-    settings.DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:'
-        }
-    }
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'techblog_cms.settings')
+    os.environ['TESTING'] = 'True'
+    django.setup()
+    
+    # Override settings for tests
+    settings.DEBUG = True
     settings.ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', 'blog.iohub.link']
     settings.MIDDLEWARE = [
         'django.middleware.security.SecurityMiddleware',
@@ -20,6 +20,7 @@ def pytest_configure():
         'django.contrib.auth.middleware.AuthenticationMiddleware',
         'django.contrib.messages.middleware.MessageMiddleware',
     ]
+    settings.SECRET_KEY = 'test-key'
 
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):

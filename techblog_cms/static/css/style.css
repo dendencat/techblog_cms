@@ -1,0 +1,47 @@
+/* Custom styles that extend Tailwind */
+body {
+  padding-top: 80px;
+  min-height: 100vh;
+}
+
+/* Sidebar styles */
+.sidebar {
+  position: sticky;
+  top: 80px;
+  height: calc(100vh - 80px);
+  overflow-y: auto;
+  background-color: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Article grid container */
+.articles-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Article card styles */
+.article-card {
+  flex: 0 0 100%;
+  margin-bottom: 1rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+}
+
+/* Responsive breakpoints */
+@media (min-width: 768px) {
+  .article-card {
+    flex: 0 0 calc(50% - 0.5rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .article-card {
+    flex: 0 0 calc(33.333% - 0.67rem);
+  }
+}

@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+{% block header %}{% endblock %}
+{% block sidebar %}{% endblock %}
+{% block content %}
+<!-- CSRFトークンを非表示で配置 -->
+<div style="display: none;">
+  {% csrf_token %}
+</div>
+
+<style>
+/* レスポンシブデザイン */
+.dashboard {
+  max-width: min(80vw, 1200px);
+  min-width: 320px;
+  margin: 40px auto;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 20px;
+}
+
+/* モバイルデバイス（768px以下） */
+@media (max-width: 768px) {
+  .dashboard {
+    max-width: 95vw;
+    padding: 0 15px;
+    margin: 20px auto;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .recent-articles li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 15px 0;
+  }
+  
+  .recent-articles li > div:last-child {
+    align-self: flex-end;
+  }
+  
+  .pagination {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  
+  .page-numbers {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+}
+
+/* タブレット（769px-1024px） */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard {
+    max-width: 90vw;
+    padding: 0 20px;
+  }
+}
+
+/* デスクトップ（1025px以上） */
+@media (min-width: 1025px) {
+  .dashboard {
+    max-width: min(75vw, 1200px);
+  }
+}
+
+/* 記事一覧の改善 */
+.recent-articles li {
+  padding: 15px 0;
+  transition: background-color 0.2s ease;
+}
+
+.recent-articles li:hover {
+  background-color: #f8f9fa;
+}
+
+.recent-articles li > div:first-child {
+  flex: 1;
+  min-width: 0; /* テキストの折り返しを許可 */
+}
+
+.recent-articles li strong {
+  display: block;
+  margin-bottom: 5px;
+  word-break: break-word;
+}
+
+/* 統計情報の改善 */
+.stats {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+}
+
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .dashboard-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .dashboard-header .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+  
+  .dashboard-header .btn-success {
+    background-color: #28a745;
+    color: white;
+    border: 1px solid #28a745;
+  }
+  
+  .dashboard-header .btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+    transform: translateY(-1px);
+  }
+  
+  .dashboard-header .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    border: 1px solid #6c757d;
+  }
+  
+  .dashboard-header .btn-success:hover,
+  .dashboard-header .btn-secondary:hover {
+    transform: translateY(-1px);
+  }
+  
+  /* モバイル対応 */
+  @media (max-width: 768px) {
+    .dashboard-header {
+      padding: 15px !important;
+      flex-direction: column !important;
+      gap: 15px !important;
+      text-align: center !important;
+    }
+    
+    .dashboard-header h1 {
+      font-size: 1.5rem !important;
+    }
+    
+    .dashboard-header .btn {
+      padding: 8px 16px !important;
+      font-size: 13px !important;
+    }
+  }
+</style>
+
+<div class="dashboard">
+  <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; margin-bottom: 20px;">
+    <h1 style="margin: 0; font-size: 2rem; font-weight: 600; color: #333;">ダッシュボード</h1>
+    <div style="display: flex; gap: 10px;">
+      <a href="{% url 'article_new' %}" class="btn btn-success" style="padding: 10px 20px; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; background-color: #28a745; color: white; border: 1px solid #28a745;">記事新規作成</a>
+      <a href="{% url 'logout' %}" class="btn btn-secondary" style="padding: 10px 20px; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; background-color: #6c757d; color: white; border: 1px solid #6c757d;">ログアウト</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="margin: 0;">記事一覧</h2>
+
+      <!-- 表示件数選択 -->
+      <div class="per-page-selector">
+        <label for="per_page" style="margin-right: 10px; font-weight: bold;">表示件数:</label>
+        <select id="per_page" name="per_page" onchange="changePerPage(this.value)"
+                style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white;">
+          {% for option in per_page_options %}
+            <option value="{{ option }}" {% if option == per_page %}selected{% endif %}>{{ option }}件</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- 記事統計情報 -->
+    <div class="stats" style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+      <p style="margin: 0; color: #666;">
+        全{{ page_obj.paginator.count }}件中 {{ page_obj.start_index }}-{{ page_obj.end_index }}件を表示
+        ({{ current_page }}/{{ total_pages }}ページ)
+      </p>
+    </div>
+
+    <ul class="recent-articles">
+      {% for a in page_obj %}
+        <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee;">
+          <div style="flex: 1;">
+            <strong><a href="{% url 'article_detail' a.slug %}" style="color: #2563eb; text-decoration: none;">{{ a.title }}</a></strong>
+            <small style="color: #6b7280; margin-left: 10px;">{{ a.created_at|date:'Y-m-d H:i' }}</small>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            {% if not a.published %}
+              <span style="background-color: #6b7280; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">下書き</span>
+            {% endif %}
+            <button type="button"
+                    class="delete-btn"
+                    data-article-id="{{ a.id }}"
+                    data-article-title="{{ a.title }}"
+                    data-article-slug="{{ a.slug }}"
+                    style="color: #dc3545; background: none; border: none; cursor: pointer; padding: 5px; border-radius: 3px; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#f8d7da'"
+                    onmouseout="this.style.backgroundColor='transparent'"
+                    title="記事を削除">
+              <i class="ti ti-trash" style="font-size: 18px;"></i>
+            </button>
+          </div>
+        </li>
+      {% empty %}
+        <li style="text-align: center; padding: 40px; color: #666;">記事がありません。</li>
+      {% endfor %}
+    </ul>
+
+    <!-- ページネーション -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination" style="display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 10px;">
+      <!-- 前のページ -->
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}"
+           class="page-link"
+           style="padding: 8px 16px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; transition: background-color 0.2s;"
+           onmouseover="this.style.backgroundColor='#0056b3'"
+           onmouseout="this.style.backgroundColor='#007bff'">
+          前のページ
+        </a>
+      {% else %}
+        <span style="padding: 8px 16px; background-color: #6c757d; color: white; border-radius: 4px;">前のページ</span>
+      {% endif %}
+
+      <!-- ページ番号 -->
+      <div class="page-numbers" style="display: flex; gap: 5px;">
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <span style="padding: 8px 12px; background-color: #007bff; color: white; border-radius: 4px; font-weight: bold;">{{ num }}</span>
+          {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+            <a href="?page={{ num }}&per_page={{ per_page }}"
+               style="padding: 8px 12px; background-color: #f8f9fa; color: #007bff; text-decoration: none; border-radius: 4px; border: 1px solid #dee2e6; transition: all 0.2s;"
+               onmouseover="this.style.backgroundColor='#e9ecef'; this.style.borderColor='#adb5bd'"
+               onmouseout="this.style.backgroundColor='#f8f9fa'; this.style.borderColor='#dee2e6'">
+              {{ num }}
+            </a>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- 次のページ -->
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}"
+           class="page-link"
+           style="padding: 8px 16px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; transition: background-color 0.2s;"
+           onmouseover="this.style.backgroundColor='#0056b3'"
+           onmouseout="this.style.backgroundColor='#007bff'">
+          次のページ
+        </a>
+      {% else %}
+        <span style="padding: 8px 16px; background-color: #6c757d; color: white; border-radius: 4px;">次のページ</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+<!-- 削除確認モーダル -->
+<div id="deleteModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+  <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px;">
+    <div class="modal-header" style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">
+      <h3 style="margin: 0; color: #dc3545;">記事の削除</h3>
+    </div>
+
+    <div class="modal-body">
+      <div class="article-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <h4 id="modal-article-title" style="margin: 0 0 10px 0; color: #333;"></h4>
+        <p id="modal-article-info" style="margin: 0; color: #666; font-size: 14px;"></p>
+      </div>
+
+      <p style="color: #666; margin-bottom: 20px;">
+        この記事を削除してもよろしいですか？<br>
+        この操作は取り消すことができません。
+      </p>
+    </div>
+
+    <div class="modal-footer" style="border-top: 1px solid #eee; padding-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
+      <button type="button" id="cancelDelete" class="btn btn-secondary" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        キャンセル
+      </button>
+      <button type="button" id="confirmDelete" class="btn btn-danger" style="padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        はい、削除する
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// モーダル関連の変数
+let currentArticleSlug = null;
+
+// 表示件数変更関数
+function changePerPage(perPage) {
+  const url = new URL(window.location);
+  url.searchParams.set('per_page', perPage);
+  url.searchParams.set('page', '1'); // 表示件数変更時は1ページ目に戻る
+  window.location.href = url.toString();
+}
+
+// 削除ボタンのクリック処理
+document.addEventListener('DOMContentLoaded', function() {
+  const deleteButtons = document.querySelectorAll('.delete-btn');
+  const modal = document.getElementById('deleteModal');
+  const cancelBtn = document.getElementById('cancelDelete');
+  const confirmBtn = document.getElementById('confirmDelete');
+
+  // 削除ボタンのクリック
+  deleteButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const articleId = this.getAttribute('data-article-id');
+      const articleTitle = this.getAttribute('data-article-title');
+      const articleSlug = this.getAttribute('data-article-slug');
+
+      // モーダルに記事情報を設定
+      document.getElementById('modal-article-title').textContent = articleTitle;
+      document.getElementById('modal-article-info').textContent = `記事ID: ${articleId}`;
+
+      // 現在の記事スラッグを保存
+      currentArticleSlug = articleSlug;
+
+      // モーダルを表示
+      modal.style.display = 'block';
+    });
+  });
+
+  // キャンセルボタンのクリック
+  cancelBtn.addEventListener('click', function() {
+    modal.style.display = 'none';
+    currentArticleSlug = null;
+  });
+
+  // 確認ボタンのクリック
+  confirmBtn.addEventListener('click', function() {
+    if (currentArticleSlug) {
+      // 削除処理を実行
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `{% url 'article_delete' 'PLACEHOLDER' %}`.replace('PLACEHOLDER', currentArticleSlug);
+
+      // CSRFトークンを追加
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+      if (csrfToken) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken.value;
+        form.appendChild(csrfInput);
+      }
+
+      document.body.appendChild(form);
+      form.submit();
+    }
+  });
+
+  // モーダル外クリックで閉じる
+  window.addEventListener('click', function(event) {
+    if (event.target === modal) {
+      modal.style.display = 'none';
+      currentArticleSlug = null;
+    }
+  });
+});
+</script>
+{% endblock %}
