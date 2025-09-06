@@ -66,12 +66,4 @@ chmod -R 755 /app/static || true
 # Gunicorn の起動（appuserとして実行）
 # -------------------------------------------
 echo "Starting Gunicorn as appuser..."
-exec gunicorn techblog_cms.wsgi:application \
-    --bind 0.0.0.0:8000 \
-    --log-level debug \
-    --access-logfile - \
-    --error-logfile - \
-    --capture-output \
-    --workers 3 \
-    --user appuser \
-    --group appgroup
+exec gunicorn --config gunicorn.conf.py techblog_cms.wsgi:application

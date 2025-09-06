@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, re_path
 from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
@@ -8,16 +8,17 @@ from . import views
 urlpatterns = [
     path('', views.home_view, name='home'),
     path('articles/', views.article_list_view, name='article_list'),
-    path('articles/<slug:slug>/', views.article_detail_view, name='article_detail'),
+    re_path(r'^articles/(?P<slug>[\w\-]+)/$', views.article_detail_view, name='article_detail'),
     path('categories/', views.categories_view, name='categories'),
     path('categories/<slug:slug>/', views.category_view, name='category'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('dashboard/articles/new/', views.article_editor_view, name='article_new'),
-    path('dashboard/articles/<slug:slug>/delete/', views.article_delete_view, name='article_delete'),
+    re_path(r'^dashboard/articles/(?P<slug>[\w\-]+)/delete/$', views.article_delete_view, name='article_delete'),
     path('dashboard/articles/delete/success/', views.article_delete_success_view, name='article_delete_success'),
     path('api/health/', views.health_check, name='health_check'),
+    path('api/preview_markdown/', views.preview_markdown_view, name='preview_markdown'),
     path('admin/', views.admin_guard, name='admin_guard'),
 ]
 

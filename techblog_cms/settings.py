@@ -136,5 +136,21 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Admin hardening
 HIDE_ADMIN_URL = True
 
+# CSRF failure view for debugging
+CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
+
+# Login URL
+LOGIN_URL = '/login/'
+
+# CSRF trusted origins
+CSRF_TRUSTED_ORIGINS = [
+    'https://blog.iohub.link',
+    'http://blog.iohub.link',
+    'https://localhost',
+    'http://localhost',
+    'https://127.0.0.1',
+    'http://127.0.0.1',
+]
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

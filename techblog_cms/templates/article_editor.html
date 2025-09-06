@@ -1,77 +1,69 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-<div class="editor-container" style="display: flex; height: 80vh; gap: 20px; padding: 20px;">
-  <!-- エディタ側 (30%) -->
-  <div class="editor-section" style="flex: 0 0 30%; display: flex; flex-direction: column;">
-    <h2 style="margin-bottom: 20px;">記事エディタ</h2>
+<div class="editor-container w-full px-4 py-4 lg:py-6">
+  <div class="flex flex-col lg:flex-row gap-6">
+  <!-- エディタ -->
+  <div class="editor-section flex-1 min-w-0 flex flex-col">
+    <h2 class="mb-5 text-xl font-semibold">記事エディタ</h2>
 
     {% if error %}
     <div class="alert alert-danger" style="margin-bottom: 20px;">{{ error }}</div>
     {% endif %}
 
-    <form method="post" id="articleForm" action="{% url 'article_new' %}" style="display: flex; flex-direction: column; height: 100%;">
+    <form method="post" id="articleForm" action="{% url 'article_new' %}" class="flex flex-col h-full">
       {% if not IS_TESTING %}
       {% csrf_token %}
       {% endif %}
 
-      <div class="form-group" style="margin-bottom: 15px;">
-        <label for="title" style="font-weight: bold;">タイトル</label>
-        <input id="title" name="title" type="text" class="form-control" required
-               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+      <div class="form-group mb-4">
+        <label for="title" class="font-bold">タイトル</label>
+        <input id="title" name="title" type="text" required
+               class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-200" />
       </div>
 
       <!-- 書式バー -->
-      <div class="formatting-toolbar" style="margin-bottom: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
-        <button type="button" class="format-btn" data-format="h1" title="見出し1">H1</button>
-        <button type="button" class="format-btn" data-format="h2" title="見出し2">H2</button>
-        <button type="button" class="format-btn" data-format="h3" title="見出し3">H3</button>
-        <button type="button" class="format-btn" data-format="bold" title="太字"><strong>B</strong></button>
-        <button type="button" class="format-btn" data-format="italic" title="斜体"><em>I</em></button>
-        <button type="button" class="format-btn" data-format="link" title="リンク">🔗</button>
-        <button type="button" class="format-btn" data-format="code" title="コード">`</button>
-        <button type="button" class="format-btn" data-format="list" title="リスト">•</button>
-        <button type="button" class="format-btn" data-format="quote" title="引用">"</button>
+      <div class="formatting-toolbar mb-2 flex gap-2 flex-wrap">
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="h1" title="見出し1" aria-label="見出し1">H1</button>
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="h2" title="見出し2" aria-label="見出し2">H2</button>
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="h3" title="見出し3" aria-label="見出し3">H3</button>
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="bold" title="太字" aria-label="太字"><strong>B</strong></button>
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="italic" title="斜体" aria-label="斜体"><em>I</em></button>
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="link" title="リンク" aria-label="リンク">🔗</button>
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="code" title="コード" aria-label="コード">`</button>
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="list" title="リスト" aria-label="リスト">•</button>
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="quote" title="引用" aria-label="引用">"</button>
       </div>
 
-      <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
-        <label for="content" style="font-weight: bold; margin-bottom: 5px;">本文 (Markdown)</label>
-        <textarea id="content" name="content" class="form-control markdown-editor"
-                  style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; resize: none;"
+      <div class="form-group flex-1 flex flex-col">
+        <label for="content" class="font-bold mb-1">本文 (Markdown)</label>
+        <textarea id="content" name="content"
+                  class="flex-1 w-full px-3 py-2 border border-gray-300 rounded-md font-mono focus:outline-none focus:ring focus:ring-blue-200 resize-y"
+                  style="min-height: 24rem;"
                   placeholder="ここに記事を書いてください..."></textarea>
       </div>
 
       <!-- ボタンエリア -->
-      <div class="button-group" style="margin-top: 20px; display: flex; gap: 10px;">
-        <button type="submit" name="action" value="save" class="btn btn-secondary"
-                style="padding: 10px 20px; border: 1px solid #6c757d; background-color: #6c757d; color: white; border-radius: 4px; cursor: pointer;">
-          💾 保存
-        </button>
-        <button type="submit" name="action" value="publish" class="btn btn-primary"
-                style="padding: 10px 20px; border: 1px solid #007bff; background-color: #007bff; color: white; border-radius: 4px; cursor: pointer;">
-          🚀 公開
-        </button>
-        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary"
-           style="padding: 10px 20px; border: 1px solid #6c757d; color: #6c757d; text-decoration: none; border-radius: 4px;">
-          戻る
-        </a>
+      <div class="button-group mt-4 flex gap-3">
+        <button type="submit" name="action" value="publish" class="px-5 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">🚀 公開</button>
+        <button type="submit" name="action" value="save" class="px-5 py-2 rounded bg-gray-700 text-white hover:bg-gray-800">💾 保存</button>
+        <a href="{% url 'dashboard' %}" class="px-5 py-2 rounded border border-gray-400 text-gray-700 hover:bg-gray-50">戻る</a>
       </div>
     </form>
   </div>
 
-  <!-- プレビュー側 (30%) -->
-  <div class="preview-section" style="flex: 0 0 30%; display: flex; flex-direction: column;">
-    <h2 style="margin-bottom: 20px;">プレビュー</h2>
-    <div id="preview" class="markdown-preview"
-         style="flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa; overflow-y: auto;">
-      <p style="color: #6c757d; font-style: italic;">プレビューがここに表示されます...</p>
+  <!-- プレビュー -->
+  <div class="preview-section flex-1 min-w-0 flex flex-col">
+    <h2 class="mb-5 text-xl font-semibold">プレビュー</h2>
+    <div id="preview" class="markdown-preview flex-1 p-4 border border-gray-300 rounded bg-gray-50 overflow-y-auto">
+      <p class="text-gray-500 italic">プレビューがここに表示されます...</p>
     </div>
   </div>
 
-  <!-- ヘルプ側 (40%) -->
-  <div class="help-section" style="flex: 0 0 40%; display: flex; flex-direction: column;">
-    <h2 style="margin-bottom: 20px;">Markdown ヘルプ</h2>
-    <div class="help-content" style="flex: 1; overflow-y: auto;">
+  <!-- ヘルプ（デスクトップは右、モバイルは下） -->
+  <div class="help-section lg:w-80 w-full flex flex-col">
+    <h2 class="mb-5 text-xl font-semibold">Markdown ヘルプ</h2>
+    <div class="help-content flex-1 overflow-y-auto p-2">
       <h3>基本的な書式</h3>
       <ul>
         <li><code># 見出し1</code> - 見出しレベル1</li>
@@ -95,6 +87,7 @@
         <li><kbd>Ctrl+Shift+8</kbd> - 順序なしリスト</li>
       </ul>
     </div>
+  </div>
   </div>
 </div>
 
@@ -156,15 +149,41 @@ function markdownToHtml(markdown) {
 }
 
 // プレビュー更新関数
-function updatePreview() {
+// 簡易debounce
+function debounce(fn, delay) {
+  let t = null;
+  return function(...args) {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+async function serverRenderMarkdown(markdown) {
+  try {
+    const resp = await fetch('/api/preview_markdown/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'text=' + encodeURIComponent(markdown || '')
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    return data.html || '';
+  } catch (e) {
+    return markdownToHtml(markdown || '');
+  }
+}
+
+async function updatePreview() {
   const content = document.getElementById('content').value;
   const preview = document.getElementById('preview');
   if (content.trim() === '') {
-    preview.innerHTML = '<p style="color: #6c757d; font-style: italic;">プレビューがここに表示されます...</p>';
+    preview.innerHTML = '<p class="text-gray-500 italic">プレビューがここに表示されます...</p>';
   } else {
-    preview.innerHTML = markdownToHtml(content);
+    const html = await serverRenderMarkdown(content);
+    preview.innerHTML = html;
   }
 }
+const updatePreviewDebounced = debounce(updatePreview, 250);
 
 // 書式ボタンの処理
 function applyFormatting(format) {
@@ -225,8 +244,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const textarea = document.getElementById('content');
   const formatBtns = document.querySelectorAll('.format-btn');
 
-  // 入力時のプレビュー更新
-  textarea.addEventListener('input', updatePreview);
+  // 入力時のプレビュー更新（debounce）
+  textarea.addEventListener('input', updatePreviewDebounced);
+
+  // スクロール同期（比率ベースの簡易同期）
+  const preview = document.getElementById('preview');
+  textarea.addEventListener('scroll', function() {
+    const ratio = textarea.scrollTop / (textarea.scrollHeight - textarea.clientHeight || 1);
+    preview.scrollTop = ratio * (preview.scrollHeight - preview.clientHeight);
+  });
 
   // 書式ボタンのクリック処理
   formatBtns.forEach(btn => {

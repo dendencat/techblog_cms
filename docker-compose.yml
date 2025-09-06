@@ -43,7 +43,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.django
-    command: gunicorn techblog_cms.wsgi:application --bind 0.0.0.0:8000 --error-logfile - --capture-output --log-level debug
     volumes:
       - .:/app
       - logs:/app/logs

@@ -2,12 +2,180 @@
 {% block header %}{% endblock %}
 {% block sidebar %}{% endblock %}
 {% block content %}
-<div class="dashboard" style="max-width: 60vw; margin: 40px auto;">
-  <div class="dashboard-header">
-    <h1>ダッシュボード</h1>
-    <div>
-      <a href="{% url 'article_new' %}" class="btn btn-success">新規記事</a>
-      <a href="{% url 'logout' %}" class="btn btn-secondary">ログアウト</a>
+<!-- CSRFトークンを非表示で配置 -->
+<div style="display: none;">
+  {% csrf_token %}
+</div>
+
+<style>
+/* レスポンシブデザイン */
+.dashboard {
+  max-width: min(80vw, 1200px);
+  min-width: 320px;
+  margin: 40px auto;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 20px;
+}
+
+/* モバイルデバイス（768px以下） */
+@media (max-width: 768px) {
+  .dashboard {
+    max-width: 95vw;
+    padding: 0 15px;
+    margin: 20px auto;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .recent-articles li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 15px 0;
+  }
+  
+  .recent-articles li > div:last-child {
+    align-self: flex-end;
+  }
+  
+  .pagination {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  
+  .page-numbers {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+}
+
+/* タブレット（769px-1024px） */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard {
+    max-width: 90vw;
+    padding: 0 20px;
+  }
+}
+
+/* デスクトップ（1025px以上） */
+@media (min-width: 1025px) {
+  .dashboard {
+    max-width: min(75vw, 1200px);
+  }
+}
+
+/* 記事一覧の改善 */
+.recent-articles li {
+  padding: 15px 0;
+  transition: background-color 0.2s ease;
+}
+
+.recent-articles li:hover {
+  background-color: #f8f9fa;
+}
+
+.recent-articles li > div:first-child {
+  flex: 1;
+  min-width: 0; /* テキストの折り返しを許可 */
+}
+
+.recent-articles li strong {
+  display: block;
+  margin-bottom: 5px;
+  word-break: break-word;
+}
+
+/* 統計情報の改善 */
+.stats {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+}
+
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .dashboard-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .dashboard-header .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+  
+  .dashboard-header .btn-success {
+    background-color: #28a745;
+    color: white;
+    border: 1px solid #28a745;
+  }
+  
+  .dashboard-header .btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+    transform: translateY(-1px);
+  }
+  
+  .dashboard-header .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    border: 1px solid #6c757d;
+  }
+  
+  .dashboard-header .btn-success:hover,
+  .dashboard-header .btn-secondary:hover {
+    transform: translateY(-1px);
+  }
+  
+  /* モバイル対応 */
+  @media (max-width: 768px) {
+    .dashboard-header {
+      padding: 15px !important;
+      flex-direction: column !important;
+      gap: 15px !important;
+      text-align: center !important;
+    }
+    
+    .dashboard-header h1 {
+      font-size: 1.5rem !important;
+    }
+    
+    .dashboard-header .btn {
+      padding: 8px 16px !important;
+      font-size: 13px !important;
+    }
+  }
+</style>
+
+<div class="dashboard">
+  <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; margin-bottom: 20px;">
+    <h1 style="margin: 0; font-size: 2rem; font-weight: 600; color: #333;">ダッシュボード</h1>
+    <div style="display: flex; gap: 10px;">
+      <a href="{% url 'article_new' %}" class="btn btn-success" style="padding: 10px 20px; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; background-color: #28a745; color: white; border: 1px solid #28a745;">記事新規作成</a>
+      <a href="{% url 'logout' %}" class="btn btn-secondary" style="padding: 10px 20px; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; background-color: #6c757d; color: white; border: 1px solid #6c757d;">ログアウト</a>
     </div>
   </div>
 

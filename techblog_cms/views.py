@@ -6,6 +6,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from .models import Article, Category
+from techblog_cms.templatetags.markdown_filter import markdown_to_html
 from django.conf import settings
 from django.http import HttpResponseNotFound
 
@@ -158,3 +159,18 @@ def article_editor_view(request):
         )
         return redirect('dashboard')
     return render(request, 'article_editor.html')
+
+
+@login_required
+@require_http_methods(["POST"]) 
+@csrf_exempt
+def preview_markdown_view(request):
+    """Render markdown to HTML for live preview using the same pipeline as production.
+
+    Notes:
+    - CSRF exempt to simplify AJAX preview while authenticated.
+    - Returns JSON: { html: "<rendered>" }
+    """
+    text = request.POST.get('text', '') or ''
+    html = markdown_to_html(text)
+    return JsonResponse({"html": str(html)})
