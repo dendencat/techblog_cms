@@ -223,3 +223,6 @@ _note/
 # backup files
 *.bak
 *.tmp
+
+# Docker override files
+docker-compose.override.yml

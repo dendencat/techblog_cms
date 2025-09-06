@@ -53,9 +53,10 @@ services:
     environment:
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,blog.iohub.link}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
       # Prefer passing through DATABASE_URL from .env to avoid duplication
       DATABASE_URL: ${DATABASE_URL}
+      # Use a single REDIS_URL derived from REDIS_PASSWORD for consistency
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       DJANGO_SETTINGS_MODULE: techblog_cms.settings
       PYTHONPATH: /app
@@ -75,6 +76,12 @@ services:
           memory: 512M
     # Security: Runs the application as a non-root user.
     # Environment variables for sensitive settings.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Database - PostgreSQL
   db:
