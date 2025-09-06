@@ -26,5 +26,7 @@ urlpatterns = [
 if not getattr(settings, 'HIDE_ADMIN_URL', False):
     urlpatterns.append(path('admin/', admin.site.urls))
 
-urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Static files served by Django only in DEBUG mode
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

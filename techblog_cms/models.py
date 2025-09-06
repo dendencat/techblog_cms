@@ -36,9 +36,6 @@ class Tag(models.Model):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse('tag', kwargs={'slug': self.slug})
-
 class Article(models.Model):
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True)
@@ -53,7 +50,13 @@ class Article(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title)
+            base_slug = slugify(self.title)
+            slug = base_slug
+            counter = 1
+            while Article.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
         if not self.excerpt and self.content:
             self.excerpt = self.content[:200]
         super().save(*args, **kwargs)
@@ -62,4 +65,4 @@ class Article(models.Model):
         return self.title
 
     def get_absolute_url(self):
-        return reverse('article', kwargs={'slug': self.slug})
+        return reverse('article_detail', kwargs={'slug': self.slug})

@@ -136,20 +136,11 @@ def article_editor_view(request):
             defaults={'description': 'General articles'}
         )
         
-        # ユニークなslugを生成
-        base_slug = title.lower().replace(' ', '-').replace('/', '-')
-        slug = base_slug
-        counter = 1
-        while Article.objects.filter(slug=slug).exists():
-            slug = f"{base_slug}-{counter}"
-            counter += 1
-        
         # 記事作成時にカテゴリを指定
         published = action == 'publish'
         article = Article.objects.create(
             title=title, 
-            content=content, 
-            slug=slug,
+            content=content,
             category=category,
             published=published  # アクションに応じて公開状態を設定
         )

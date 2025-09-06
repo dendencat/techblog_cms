@@ -10,15 +10,18 @@ def pytest_configure():
     django.setup()
     
     # Override settings for tests
-    settings.DEBUG = True
+    settings.DEBUG = False  # Match production expectation
     settings.ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', 'blog.iohub.link']
     settings.MIDDLEWARE = [
+        'corsheaders.middleware.CorsMiddleware',
+        'csp.middleware.CSPMiddleware',
         'django.middleware.security.SecurityMiddleware',
         'django.contrib.sessions.middleware.SessionMiddleware',
         'django.middleware.common.CommonMiddleware',
         'django.middleware.csrf.CsrfViewMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
         'django.contrib.messages.middleware.MessageMiddleware',
+        'django.middleware.clickjacking.XFrameOptionsMiddleware',
     ]
     settings.SECRET_KEY = 'test-key'
 

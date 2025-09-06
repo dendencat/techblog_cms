@@ -22,6 +22,6 @@ accesslog = os.path.join(current_dir, 'logs/access.log')
 loglevel = 'debug'
 
 # Development settings
-reload = True
+reload = os.environ.get('DEBUG', 'False').lower() == 'true'
 capture_output = True
 enable_stdio_inheritance = True
