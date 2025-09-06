@@ -1,3 +1,4 @@
+---
 description: TechBlog CMS repository-wide Copilot instructions
 mode: agent
 tools: ['extensions', 'codebase', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'terminalSelection', 'terminalLastCommand', 'openSimpleBrowser', 'fetch', 'findTestFiles', 'searchResults', 'githubRepo', 'getPythonEnvironmentInfo', 'getPythonExecutableCommand', 'installPythonPackage', 'configurePythonEnvironment', 'runTests', 'runCommands', 'runTasks', 'editFiles', 'runNotebooks', 'search']
@@ -21,6 +22,7 @@ model: Grok Code Fast 1 (Preview)
 - 推奨: Docker Compose
   - 起動: `docker compose up -d`
   - 初期化は `docker/entrypoint.sh` が担当（migrate, collectstatic）
+  - Djangoコマンド: `docker compose exec django python manage.py <command>`
 - ローカル（必要時）
   - 依存: `pip install -r requirements.txt`
   - DB設定: `.env.example` を `.env` にコピーし値を設定
