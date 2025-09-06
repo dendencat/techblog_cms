@@ -17,8 +17,8 @@ chdir = '/app'
 wsgi_app = 'techblog_cms.wsgi:application'  # Updated WSGI path
 
 # Logging
-errorlog = os.path.join(current_dir, 'logs/error.log')
-accesslog = os.path.join(current_dir, 'logs/access.log')
+errorlog = '-'
+accesslog = '-'
 loglevel = 'debug'
 
 # Development settings

@@ -118,7 +118,9 @@ else:
     }
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+# NOTE: Must start with a leading slash to avoid relative URLs like
+# /dashboard/static/...  which break behind reverse proxy.
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'techblog_cms', 'static'),

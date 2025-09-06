@@ -218,6 +218,7 @@
             {% endif %}
             <a href="{% url 'article_edit' a.slug %}"
                class="edit-btn"
+               aria-label="記事を編集"
                style="color: #007bff; background: none; border: none; cursor: pointer; padding: 5px; border-radius: 3px; transition: background-color 0.2s; text-decoration: none;"
                onmouseover="this.style.backgroundColor='#e7f3ff'"
                onmouseout="this.style.backgroundColor='transparent'"
@@ -229,6 +230,7 @@
                     data-article-id="{{ a.id }}"
                     data-article-title="{{ a.title }}"
                     data-article-slug="{{ a.slug }}"
+                    aria-label="記事を削除"
                     style="color: #dc3545; background: none; border: none; cursor: pointer; padding: 5px; border-radius: 3px; transition: background-color 0.2s;"
                     onmouseover="this.style.backgroundColor='#f8d7da'"
                     onmouseout="this.style.backgroundColor='transparent'"
