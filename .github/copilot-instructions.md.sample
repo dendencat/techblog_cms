@@ -1,0 +1,68 @@
+---
+description: New prompt created from chat session
+mode: agent
+tools: ['extensions', 'codebase', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'terminalSelection', 'terminalLastCommand', 'openSimpleBrowser', 'fetch', 'findTestFiles', 'searchResults', 'githubRepo', 'getPythonEnvironmentInfo', 'getPythonExecutableCommand', 'installPythonPackage', 'configurePythonEnvironment', 'runTests', 'runCommands', 'runTasks', 'weather', 'editFiles', 'runNotebooks', 'search', 'new']
+model: Grok Code Fast 1 (Preview)
+---
+# .github/copilot-instructions.md
+
+> リポジトリ全体で **Copilot Chat / Copilot コードレビュー / Copilot Coding Agent** が参照する共通ルール。
+> 文は**断定形**で短く。ビルド・テスト・安全策・表記ルールを最小限で網羅。
+
+## Project facts
+- ランタイム: Node.js 20 / pnpm 9
+- 言語: TypeScript, JSX/TSX
+- フレームワーク: Next.js (App Router)
+- Lint/Format: ESLint, Prettier
+- テスト: Vitest（単体/結合）、Playwright（E2E）
+- CI: GitHub Actions（`ci.yml`）
+
+## How to build, test, run
+- 依存の追加・更新は **pnpm** を使う。**npm/yarn は使わない**。
+- セットアップ: `pnpm install`。E2E の依存は `pnpm dlx playwright install --with-deps`。
+- 開発サーバ: `pnpm dev`。
+- 本番ビルド: `pnpm build && pnpm start`。
+- 単体/結合テスト: `pnpm test`。スナップショット更新は `pnpm test -u`。
+- E2E テスト: 開発サーバ起動後に `pnpm e2e`。
+- Lint/Format: `pnpm lint` と `pnpm format:check` を通す。
+
+## Repository structure
+- `app/`: Next.js のルーティングとページコンポーネント。
+- `components/`: 再利用可能な UI コンポーネント。
+- `lib/`: ビジネスロジック、API クライアント、
+    ユーティリティ関数。
+- `hooks/`: React カスタムフック。
+- `styles/`: グローバル CSS とテーマ。
+- `tests/`: 単体・結合テストとテストユーティリティ。
+- `e2e/`: Playwright の E2E テスト。
+- `public/`: 静的アセット（画像、フォントなど）。
+
+## Coding conventions
+- TypeScript の **strict** を維持する。`any` の導入は代替案の検討と理由付けを行う。
+- UI 変更は可能であれば **Playwright のテスト**を追加・更新する。
+- 1 PR = 1 目的。機能追加と大規模リファクタを同一 PR に混在させない。
+- 依存追加は PR 説明に**採用理由**と**影響範囲**を書く。
+
+## Security & secrets
+- 機密情報は `.env` から読み込む。**ソースに直書きしない**。
+- 新しい環境変数は `.env.example` に **キーのみ**追加する。値は書かない。
+- 破壊的操作（`git push --force`、DB マイグレーションの本番適用など）は **行わない**。必要時は Draft PR で相談する。
+
+## Expectations in CI / PR
+- CI では `pnpm build` と `pnpm test` が成功していること。
+- ESLint 警告はエラー扱い。ゼロにする。
+- 変更が大きい場合は**設計意図**と**テスト方針**を PR 説明に記載する。
+
+## Preferences for Copilot
+- コード生成では **pnpm スクリプト**を優先して用いる（`package.json` の `scripts` を参照）。
+- E2E の自動化が必要な場合は **Playwright** を選択する。
+- 新規 UI コンポーネントは**アクセシビリティ**（ラベル、キーボード操作、コントラスト）を満たす実装を提案する。
+
+---
+
+### (補助) よくある作業例
+- 「型エラーの解消」: 型の追加 → 単体テスト更新 → Lint/Format → E2E 必要性の評価。
+- 「外部 API 呼び出し追加」: 型定義 → `lib/` にクライアント実装 → リトライ/タイムアウト → 単体テスト → 影響箇所の統合テスト。
+
+> 注: さらに領域別の詳細手順が必要な場合は、各ディレクトリに `AGENTS.md` を置くか、`.github/instructions/*.instructions.md` を使ってパス限定の指示を追加してください。
+
