@@ -31,6 +31,67 @@ show_help() {
     echo "  $0 db --restore --file ./backup/backup_20250907.sql"
 }
 
+# Function to display init help
+show_init_help() {
+    echo "Usage: $0 init [options...]"
+    echo ""
+    echo "Initialize or setup the TechBlog CMS."
+    echo ""
+    echo "This command will perform initial setup operations such as:"
+    echo "  - Database initialization"
+    echo "  - Static files collection"
+    echo "  - Initial data creation"
+    echo ""
+    echo "Options:"
+    echo "  --help            Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0 init"
+}
+
+# Function to display db help
+show_db_help() {
+    echo "Usage: $0 db <command> [options...]"
+    echo ""
+    echo "Database operations for TechBlog CMS."
+    echo ""
+    echo "Commands:"
+    echo "  --backup          Create database backup"
+    echo "  --restore         Restore database from backup"
+    echo ""
+    echo "Options:"
+    echo "  --path DIR        Backup directory (default: current directory)"
+    echo "  --file FILE       Backup file path for restore"
+    echo "  --help            Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0 db --backup"
+    echo "  $0 db --backup --path ./backups"
+    echo "  $0 db --restore --file ./backup/backup_20250907.sql"
+}
+
+# Function to display container help
+show_container_help() {
+    echo "Usage: $0 container <command> [options...]"
+    echo ""
+    echo "Container management operations for TechBlog CMS."
+    echo ""
+    echo "Commands:"
+    echo "  --start           Start all containers"
+    echo "  --stop            Stop all containers"
+    echo "  --restart         Restart all containers"
+    echo "  --status          Show container status"
+    echo "  --logs            Show container logs"
+    echo ""
+    echo "Options:"
+    echo "  --help            Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0 container --start"
+    echo "  $0 container --status"
+    echo "  $0 container --logs django"
+}
+
 # Check if no arguments provided
 if [[ $# -eq 0 ]]; then
     show_help
@@ -40,6 +101,34 @@ fi
 # Get the command
 COMMAND="$1"
 shift
+
+# Check if help is requested for a specific command
+if [[ $# -eq 1 && "$1" == "--help" ]]; then
+    case $COMMAND in
+        init)
+            show_init_help
+            exit 0
+            ;;
+        db)
+            show_db_help
+            exit 0
+            ;;
+        container)
+            show_container_help
+            exit 0
+            ;;
+        --help)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo "Unknown command: $COMMAND"
+            echo "Available commands: init, db, container"
+            echo "Use '$0 --help' for usage information"
+            exit 1
+            ;;
+    esac
+fi
 
 # Default values
 BACKUP_DIR="$(pwd)"
@@ -169,6 +258,7 @@ case $COMMAND in
         
     --help)
         show_help
+        exit 0
         ;;
         
     *)
@@ -179,4 +269,7 @@ case $COMMAND in
         ;;
 esac
 
-echo "Operation completed."
+# Only show completion message for actual operations, not for help
+if [[ "$COMMAND" != "--help" && "$1" != "--help" ]]; then
+    echo "Operation completed."
+fi
