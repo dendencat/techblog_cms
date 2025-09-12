@@ -189,9 +189,9 @@ case $COMMAND in
         fi
 
         # Check if Docker Compose is running
-        if ! docker-compose ps | grep -q "Up"; then
+        if ! docker compose ps | grep -q "Up"; then
             echo "Error: Docker Compose services are not running"
-            echo "Please run 'docker-compose up -d' first"
+            echo "Please run 'docker compose up -d' first"
             exit 1
         fi
 
@@ -209,7 +209,7 @@ case $COMMAND in
                 echo "Backup will be saved to: $BACKUP_PATH"
                 
                 # Execute backup
-                if docker-compose exec -T db pg_dump -U techblog -h localhost techblogdb > "$BACKUP_PATH"; then
+                if docker compose exec -T db pg_dump -U techblog -h localhost techblogdb > "$BACKUP_PATH"; then
                     echo -e "\033[0;32m✅ Backup completed successfully: $BACKUP_PATH\033[0m"
                     echo "File size: $(du -h "$BACKUP_PATH" | cut -f1)"
                 else
@@ -233,12 +233,12 @@ case $COMMAND in
                 fi
                 
                 # Execute restore
-                if docker-compose exec -T db psql -U techblog -h localhost techblogdb < "$BACKUP_FILE"; then
+                if docker compose exec -T db psql -U techblog -h localhost techblogdb < "$BACKUP_FILE"; then
                     echo -e "\033[0;32m✅ Restore completed successfully\033[0m"
                     
                     # Run Django migrations after restore
                     echo "Running Django migrations..."
-                    docker-compose exec django python manage.py migrate --noinput
+                    docker compose exec django python manage.py migrate --noinput
                     
                     echo -e "\033[0;32m✅ Database migration completed\033[0m"
                 else
@@ -253,7 +253,7 @@ case $COMMAND in
         echo "Container management operations..."
         # Add container management logic here
         echo "Available containers:"
-        docker-compose ps
+        docker compose ps
         ;;
         
     --help)
