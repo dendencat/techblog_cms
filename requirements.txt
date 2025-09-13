@@ -41,7 +41,10 @@ flake8>=6.1,<7.0
 isort>=5.13,<6.0
 
 # Documentation
-Markdown>=3.5,<4.0
+markdown>=3.5,<4.0
+
+# Optional: Image processing
+# Pillow>=10.1,<11.0
 
 # Optional: API framework
 # djangorestframework>=3.14,<4.0

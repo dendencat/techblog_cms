@@ -51,7 +51,7 @@ services:
     expose:
       - 8000
     environment:
-      SECRET_KEY: ${SECRET_KEY}
+     SECRET_KEY: ${SECRET_KEY}  # Loaded from .env file
       DEBUG: ${DEBUG:-False}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
       # Prefer passing through DATABASE_URL from .env to avoid duplication
@@ -112,9 +112,9 @@ services:
   # Caching - Redis
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: redis-server --requirepass ${REDIS_PASSWORD:-your_redis_password} # Set a password
+    ports:
+      - "6379:6379"
     networks:
       - techblog_network
     restart: always

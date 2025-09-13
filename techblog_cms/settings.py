@@ -154,8 +154,6 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
- 
-
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -302,4 +300,4 @@ if 'test' in sys.argv:
     PASSWORD_HASHERS = [
         'django.contrib.auth.hashers.MD5PasswordHasher',
     ]
- 
+
