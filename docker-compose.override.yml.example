@@ -1,0 +1,34 @@
+# Docker Compose Override for Development
+# Copy this file to docker-compose.override.yml for local development
+
+version: '3'
+
+services:
+  django:
+    # Mount source code for hot reloading
+    volumes:
+      - .:/app
+      - logs:/app/logs
+    # Enable debug mode for development
+    environment:
+      DEBUG: "True"
+      ALLOWED_HOSTS: "localhost,127.0.0.1"
+    # Use development server instead of gunicorn
+    command: python manage.py runserver 0.0.0.0:8000
+
+  db:
+    # Expose PostgreSQL port for local development tools
+    ports:
+      - "5432:5432"
+
+  redis:
+    # Expose Redis port for local development tools
+    ports:
+      - "6379:6379"
+
+  nginx:
+    # Disable HTTPS for local development
+    ports:
+      - "80:80"
+      # Comment out HTTPS port for local dev
+      # - "443:443"
