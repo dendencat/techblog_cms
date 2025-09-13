@@ -53,9 +53,11 @@ services:
     environment:
      SECRET_KEY: ${SECRET_KEY}  # Loaded from .env file
       DEBUG: ${DEBUG:-False}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      # Prefer passing through DATABASE_URL from .env to avoid duplication
       DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
+      # Use a single REDIS_URL derived from REDIS_PASSWORD for consistency
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       DJANGO_SETTINGS_MODULE: techblog_cms.settings
       PYTHONPATH: /app
       DJANGO_ENV: production
