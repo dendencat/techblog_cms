@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
-from .models import Article, Category
+from .models import Article, Category, Tag
 from techblog_cms.templatetags.markdown_filter import markdown_to_html
 from django.conf import settings
 from django.http import HttpResponseNotFound
@@ -18,20 +18,91 @@ def index(request):
 
 def home_view(request):
     articles = Article.objects.filter(published=True).order_by('-created_at')[:10]
-    return render(request, 'home.html', {'articles': articles})
+    categories = Category.objects.all()
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'home.html',
+        {
+            'articles': articles,
+            'categories': categories,
+            'tags': tags,
+        },
+    )
 
 def article_list_view(request):
     articles = Article.objects.filter(published=True).order_by('-created_at')
-    return render(request, 'article_list.html', {'articles': articles})
+    categories = Category.objects.all()
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'article_list.html',
+        {
+            'articles': articles,
+            'categories': categories,
+            'tags': tags,
+        },
+    )
 
 def categories_view(request):
     categories = Category.objects.all()
-    return render(request, 'category_list.html', {'categories': categories})
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'category_list.html',
+        {
+            'categories': categories,
+            'tags': tags,
+        },
+    )
 
 def category_view(request, slug):
     category = get_object_or_404(Category, slug=slug)
     articles = category.article_set.filter(published=True).order_by('-created_at')
-    return render(request, 'category_detail.html', {'category': category, 'articles': articles})
+    categories = Category.objects.all()
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'category_detail.html',
+        {
+            'category': category,
+            'articles': articles,
+            'categories': categories,
+            'tags': tags,
+        },
+    )
+
+def tags_view(request):
+    tags = Tag.objects.all()
+    categories = Category.objects.all()
+    return render(
+        request,
+        'tag_list.html',
+        {
+            'tags': tags,
+            'categories': categories,
+        },
+    )
+
+def tag_view(request, slug):
+    tag = get_object_or_404(Tag, slug=slug)
+    if request.user.is_authenticated:
+        articles = tag.article_set.order_by('-created_at')
+    else:
+        articles = tag.article_set.filter(published=True).order_by('-created_at')
+
+    categories = Category.objects.all()
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'tag_detail.html',
+        {
+            'tag': tag,
+            'articles': articles,
+            'categories': categories,
+            'tags': tags,
+        },
+    )
 
 def article_detail_view(request, slug):
     # ログインしている場合は下書き記事も表示可能
@@ -39,7 +110,17 @@ def article_detail_view(request, slug):
         article = get_object_or_404(Article, slug=slug)
     else:
         article = get_object_or_404(Article, slug=slug, published=True)
-    return render(request, 'article_detail.html', {'article': article})
+    categories = Category.objects.all()
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'article_detail.html',
+        {
+            'article': article,
+            'categories': categories,
+            'tags': tags,
+        },
+    )
 def admin_guard(request):
     """Direct /admin/ access guard. Show 404 if HIDE_ADMIN_URL is True."""
     if getattr(settings, 'HIDE_ADMIN_URL', False):
