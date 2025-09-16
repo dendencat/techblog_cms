@@ -1,14 +1,61 @@
 /* Custom styles that extend Tailwind */
 body {
-  padding-top: 80px;
+  padding-top: 9rem;
+  padding-top: calc(9rem + env(safe-area-inset-top));
   min-height: 100vh;
+}
+
+#mobile-menu-button {
+  position: relative;
+}
+
+#mobile-menu-button .hamburger-line {
+  position: absolute;
+  left: 50%;
+  width: 1.5rem;
+  height: 0.125rem;
+  background-color: currentColor;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  transition: transform 0.25s ease, opacity 0.2s ease, top 0.25s ease;
+}
+
+#mobile-menu-button .hamburger-line-top {
+  top: calc(50% - 0.45rem);
+}
+
+#mobile-menu-button .hamburger-line-middle {
+  top: 50%;
+}
+
+#mobile-menu-button .hamburger-line-bottom {
+  top: calc(50% + 0.45rem);
+}
+
+#mobile-menu-button.open .hamburger-line-top,
+#mobile-menu-button.open .hamburger-line-bottom {
+  top: 50%;
+}
+
+#mobile-menu-button.open .hamburger-line-top {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+#mobile-menu-button.open .hamburger-line-middle {
+  opacity: 0;
+}
+
+#mobile-menu-button.open .hamburger-line-bottom {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 /* Sidebar styles */
 .sidebar {
   position: sticky;
-  top: 80px;
-  height: calc(100vh - 80px);
+  top: 5rem;
+  top: calc(5rem + env(safe-area-inset-top));
+  height: calc(100vh - 5rem);
+  height: calc(100vh - (5rem + env(safe-area-inset-top)));
   overflow-y: auto;
   background-color: white;
   padding: 1rem;
@@ -35,6 +82,11 @@ body {
 
 /* Responsive breakpoints */
 @media (min-width: 768px) {
+  body {
+    padding-top: 5rem;
+    padding-top: calc(5rem + env(safe-area-inset-top));
+  }
+
   .article-card {
     flex: 0 0 calc(50% - 0.5rem);
   }

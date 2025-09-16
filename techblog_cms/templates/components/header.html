@@ -26,11 +26,12 @@
 
                 <!-- Mobile menu button -->
                 <button id="mobile-menu-button" type="button"
-                        class="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                        class="md:hidden relative inline-flex items-center justify-center w-10 h-10 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors"
                         aria-controls="mobile-menu" aria-expanded="false" aria-label="メインメニューを開く">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
+                    <span class="sr-only" data-menu-button-label>メインメニューを開く</span>
+                    <span aria-hidden="true" class="hamburger-line hamburger-line-top"></span>
+                    <span aria-hidden="true" class="hamburger-line hamburger-line-middle"></span>
+                    <span aria-hidden="true" class="hamburger-line hamburger-line-bottom"></span>
                 </button>
             </div>
         </div>
