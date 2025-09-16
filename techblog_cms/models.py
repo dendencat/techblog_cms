@@ -53,10 +53,26 @@ class Article(models.Model):
     image = models.ImageField(upload_to='articles/', blank=True, null=True)
 
     def _generate_unique_slug(self):
+        slug_field = self._meta.get_field('slug')
+        max_length = slug_field.max_length or 50
+        suffix_length = 8
         base_slug = slugify(self.title) or 'article'
+
+        if max_length > suffix_length + 1:
+            base_max_length = max_length - (suffix_length + 1)
+            base_slug = base_slug[:base_max_length].rstrip('-')
+            if not base_slug:
+                base_slug = 'article'
+            base_slug = base_slug[:base_max_length]
+        else:
+            base_slug = ''
+
         while True:
-            hash_fragment = uuid.uuid4().hex[:8]
-            candidate = f"{base_slug}-{hash_fragment}"
+            if base_slug:
+                hash_fragment = uuid.uuid4().hex[:suffix_length]
+                candidate = f"{base_slug}-{hash_fragment}"
+            else:
+                candidate = uuid.uuid4().hex[:max_length]
             if not Article.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
                 return candidate
 
