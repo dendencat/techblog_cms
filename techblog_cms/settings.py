@@ -67,15 +67,11 @@ IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.
 print(f"IS_TESTING: {IS_TESTING}")
 
 if IS_TESTING:
-    # Testing uses explicit env vars to keep CI simple
+    # Testing uses SQLite for simplicity
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB', 'techblogdb'),
-            'USER': os.environ.get('POSTGRES_USER', 'techblog'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'techblogpass'),
-            'HOST': os.environ.get('POSTGRES_HOST', 'db'),
-            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
         }
     }
     # Disable CSRF for testing

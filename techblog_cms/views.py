@@ -55,15 +55,15 @@ def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        print(f"Username: {username}, Password: {password}")
+        
+        # Use Django's authenticate function but ensure consistent behavior
         user = authenticate(username=username, password=password)
-        print(f"User: {user}")
         if user is not None:
-            print("Login successful")
             login(request, user)
             return redirect('dashboard')
         else:
-            return render(request, 'login.html', {"error": "ユーザー名またはパスワードが違います。"}, status=401)
+            # Generic error message to prevent username enumeration
+            return render(request, 'login.html', {"error": "Invalid credentials"}, status=401)
     return render(request, 'login.html')
 
 
