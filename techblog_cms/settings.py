@@ -8,6 +8,13 @@ from urllib.parse import urlparse, unquote
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Detect testing mode early so dependent settings can branch consistently.
+IS_TESTING = (
+    os.environ.get('TESTING') == 'True'
+    or 'PYTEST_CURRENT_TEST' in os.environ
+    or any(name.endswith('pytest') for name in sys.modules)
+)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -76,46 +83,53 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'techblog_cms.wsgi.application'
 
-# Database
-# Database
-# Prefer DATABASE_URL when provided (12factor style)
-db_url = os.environ.get('DATABASE_URL')
-if db_url:
-    parsed = urlparse(db_url)
+if IS_TESTING:
+    # Unit tests use an in-memory SQLite database to avoid external service dependencies.
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': parsed.path.lstrip('/') or os.environ.get('APP_DB_NAME') or os.environ.get('POSTGRES_DB', 'techblogdb'),
-            'USER': unquote(parsed.username or os.environ.get('APP_DB_USER') or os.environ.get('POSTGRES_USER', 'techblog')),
-            'PASSWORD': unquote(parsed.password or os.environ.get('APP_DB_PASSWORD') or os.environ.get('POSTGRES_PASSWORD', 'techblogpass')),
-            'HOST': parsed.hostname or os.environ.get('POSTGRES_HOST', 'db'),
-            'PORT': str(parsed.port or os.environ.get('POSTGRES_PORT', '5432')),
-        }
-    }
-elif os.environ.get('APP_DB_USER') or os.environ.get('APP_DB_NAME') or os.environ.get('APP_DB_PASSWORD'):
-    # Next preference: dedicated app credentials if provided
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('APP_DB_NAME', os.environ.get('POSTGRES_DB', 'techblogdb')),
-            'USER': os.environ.get('APP_DB_USER', os.environ.get('POSTGRES_USER', 'techblog')),
-            'PASSWORD': os.environ.get('APP_DB_PASSWORD', os.environ.get('POSTGRES_PASSWORD', 'techblogpass')),
-            'HOST': os.environ.get('POSTGRES_HOST', 'db'),
-            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
         }
     }
 else:
-    # Fallback to generic POSTGRES_* variables
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB', 'techblogdb'),
-            'USER': os.environ.get('POSTGRES_USER', 'techblog'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'techblogpass'),
-            'HOST': os.environ.get('POSTGRES_HOST', 'db'),
-            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+    # Prefer DATABASE_URL when provided (12factor style)
+    db_url = os.environ.get('DATABASE_URL')
+    if db_url:
+        parsed = urlparse(db_url)
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': parsed.path.lstrip('/') or os.environ.get('APP_DB_NAME') or os.environ.get('POSTGRES_DB', 'techblogdb'),
+                'USER': unquote(parsed.username or os.environ.get('APP_DB_USER') or os.environ.get('POSTGRES_USER', 'techblog')),
+                'PASSWORD': unquote(parsed.password or os.environ.get('APP_DB_PASSWORD') or os.environ.get('POSTGRES_PASSWORD', 'techblogpass')),
+                'HOST': parsed.hostname or os.environ.get('POSTGRES_HOST', 'db'),
+                'PORT': str(parsed.port or os.environ.get('POSTGRES_PORT', '5432')),
+            }
         }
-    }
+    elif os.environ.get('APP_DB_USER') or os.environ.get('APP_DB_NAME') or os.environ.get('APP_DB_PASSWORD'):
+        # Next preference: dedicated app credentials if provided
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.environ.get('APP_DB_NAME', os.environ.get('POSTGRES_DB', 'techblogdb')),
+                'USER': os.environ.get('APP_DB_USER', os.environ.get('POSTGRES_USER', 'techblog')),
+                'PASSWORD': os.environ.get('APP_DB_PASSWORD', os.environ.get('POSTGRES_PASSWORD', 'techblogpass')),
+                'HOST': os.environ.get('POSTGRES_HOST', 'db'),
+                'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            }
+        }
+    else:
+        # Fallback to generic POSTGRES_* variables
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.environ.get('POSTGRES_DB', 'techblogdb'),
+                'USER': os.environ.get('POSTGRES_USER', 'techblog'),
+                'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'techblogpass'),
+                'HOST': os.environ.get('POSTGRES_HOST', 'db'),
+                'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            }
+        }
 
 # Static files (CSS, JavaScript, Images)
 # NOTE: Must start with a leading slash to avoid relative URLs like

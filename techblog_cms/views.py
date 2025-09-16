@@ -59,7 +59,8 @@ def login_view(request):
             login(request, user)
             return redirect('dashboard')
         else:
-            return render(request, 'login.html', {"error": "ユーザー名またはパスワードが違います。"}, status=401)
+            # Share the same generic message regardless of which field was incorrect to avoid enumeration.
+            return render(request, 'login.html', {"error": "Invalid credentials"}, status=401)
     return render(request, 'login.html')
 
 
