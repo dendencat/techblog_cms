@@ -1,108 +1,112 @@
-# AGENTS.md - AIアシスタント向けガイド
+# AGENTS.md - Guide for AI Assistants
 
-## 目的
-このドキュメントは、GitHub CopilotやClaudeなどのAIアシスタントがこのレポジトリ（techblog_cms）を理解し、効果的に支援するためのガイドラインを提供します。レポジトリの構造、技術スタック、開発プロセスを明確にし、AIが適切なコード生成やアドバイスを行えるようにします。
+## Purpose
+This document provides guidelines for AI assistants like GitHub Copilot and Claude to understand this repository (techblog_cms) and assist effectively. It clarifies the repository structure, tech stack, and development process to enable AI to generate appropriate code and provide sound advice.
 
-## レポジトリ概要
-techblog_cmsは、Djangoベースの技術ブログコンテンツ管理システムです。Docker Composeを使用したコンテナ化環境で、Nginxによるリバースプロキシ、PostgreSQLデータベース、Redisキャッシュ、Let's EncryptによるSSL証明書の自動管理を統合しています。プロダクションレディな構成を目指し、セキュリティとスケーラビリティを重視しています。
+## Repository Overview
+techblog_cms is a Django-based technical blog content management system. It operates in a containerized environment using Docker Compose, integrating Nginx reverse proxy, PostgreSQL database, Redis cache, and automated SSL certificate management via Let's Encrypt. The configuration prioritizes security and scalability, aiming for production readiness.
 
-## 技術スタック
-- **バックエンド**: Django 4.2, Python 3.11
-- **データベース**: PostgreSQL
-- **キャッシュ**: Redis
-- **Webサーバー**: Nginx (リバースプロキシ + 静的ファイル配信)
-- **コンテナ化**: Docker, Docker Compose
-- **SSL証明書**: Let's Encrypt (Certbot)
-- **テスト**: pytest, Django Test Framework
+## Technology Stack
+- **Backend**: Django 4.2, Python 3.11
+- **Database**: PostgreSQL
+- **Cache**: Redis
+- **Web Server**: Nginx (Reverse Proxy + Static File Delivery)
+- **Containerization**: Docker, Docker Compose
+- **SSL Certificates**: Let's Encrypt (Certbot)
+- **Testing**: pytest, Django Test Framework
 - **CI/CD**: GitHub Actions
-- **セキュリティ**: HTTPS強制, セキュリティヘッダー, 環境変数管理
-- **フロントエンド**: HTML/CSS (Tailwind CSS), JavaScript (最小限)
+- **Security**: HTTPS enforcement, security headers, environment variable management
+- **Frontend**: HTML/CSS (Tailwind CSS), JavaScript (minimal)
 
-## プロジェクト構造
+## Project Structure
 ```
 techblog_cms/
-├── app/                          # Djangoアプリケーション
-│   ├── techblog_cms/            # メインDjangoアプリ
+├── app/                          # Django application
+│   ├── techblog_cms/            # Main Django app
 │   │   ├── __init__.py
-│   │   ├── settings.py          # Django設定（環境変数使用）
-│   │   ├── urls.py              # URLマッピング
-│   │   ├── views.py             # ビュー関数
-│   │   ├── wsgi.py              # WSGIエントリーポイント
-│   │   └── templates/           # HTMLテンプレート
-│   └── requirements.txt         # Python依存関係
-├── nginx/                        # Nginx設定
+│   │   ├── settings.py          # Django settings (using environment variables)
+│   │   ├── urls.py              # URL mapping
+│   │   ├── views.py             # View functions
+│   │   ├── wsgi.py              # WSGI entry point
+│   │   └── templates/           # HTML templates
+│   └── requirements.txt         # Python dependencies
+├── nginx/                        # Nginx configuration
 │   ├── conf.d/
-│   │   └── default.conf         # Nginx設定ファイル
-│   └── Dockerfile               # Nginxコンテナ定義
-├── scripts/                      # ユーティリティスクリプト
-│   ├── init-letsencrypt.sh      # SSL証明書初期化
-│   └── renew-cert.sh            # SSL証明書更新
-├── static/                       # 静的ファイル
-├── tests/                        # テストファイル
-├── docker-compose.yml            # コンテナオーケストレーション
-├── Dockerfile.*                  # 各種Dockerfile
-├── requirements.txt              # プロジェクト全体の依存関係
-└── pytest.ini                    # pytest設定
+│   │   └── default.conf         # Nginx configuration file
+│   └── Dockerfile               # Nginx container definition
+├── scripts/                      # Utility scripts
+│   ├── init-letsencrypt.sh      # Initialize SSL certificate
+│   └── renew-cert.sh            # Renew SSL certificate
+├── static/                       # Static files
+├── tests/                        # Test files
+├── docker-compose.yml            # Container orchestration
+├── Dockerfile.*                  # Various Dockerfiles
+├── requirements.txt              # Project-wide dependencies
+└── pytest.ini                    # pytest configuration
 ```
 
-## 開発ガイドライン
+## Development Guidelines
 
-### コーディング標準
-- **Python**: PEP 8準拠、Blackフォーマッター使用
-- **Django**: Djangoベストプラクティスに従う
-- **Docker**: マルチステージビルド、セキュリティスキャン（Trivy）
-- **セキュリティ**: 環境変数で機密情報を管理、HTTPS強制
+### Coding Standards
+- **Python**: PEP 8 compliant, using Black formatter
+- **Django**: Follow Django best practices
+- **Docker**: Multi-stage builds, security scanning (Trivy)
+- **Security**: Manage sensitive info via environment variables, enforce HTTPS
 
-### 環境変数
-重要な設定は環境変数で管理：
-- `DEBUG`: デバッグモード（本番ではFalse）
-- `SECRET_KEY`: Djangoシークレットキー
-- `DATABASE_URL`: PostgreSQL接続文字列
-- `REDIS_URL`: Redis接続文字列
-- `ALLOWED_HOSTS`: 許可ホストリスト
+### Environment Variables
+Critical settings managed via environment variables:
+- `DEBUG`: Debug mode (False in production)
+- `SECRET_KEY`: Django secret key
+- `DATABASE_URL`: PostgreSQL connection string
+- `REDIS_URL`: Redis connection string
+- `ALLOWED_HOSTS`: List of allowed hosts
 
-### テスト
-- pytestを使用したユニットテストと統合テスト
-- CI/CDで自動テスト実行
-- カバレッジレポート生成
 
-## AIアシスタントへの指示
+### Testing
+- Unit and integration testing using pytest
+- Automated test execution via CI/CD
+- Coverage report generation
 
-### コード生成時の考慮事項
-1. **セキュリティ優先**: 機密情報は環境変数を使用。ハードコーディング禁止。
-2. **コンテナ化対応**: Dockerベストプラクティスに従い、軽量イメージを作成。
-3. **Djangoベストプラクティス**: ビュー関数、モデル、テンプレートの適切な分離。
-4. **エラーハンドリング**: 適切な例外処理とログ出力。
-5. **パフォーマンス**: データベースクエリの最適化、キャッシュの活用。
 
-### 支援時のガイドライン
-1. **新規機能追加**: 既存の構造に準拠。必要に応じてマイグレーション作成。
-2. **バグ修正**: テストケースを追加し、リグレッションを防ぐ。
-3. **ドキュメント更新**: コード変更時はREADME.mdやこのAGENTS.mdを更新。
-4. **依存関係**: 新しいパッケージ追加時はrequirements.txtを更新。
-5. **Docker設定**: 変更時はdocker-compose.ymlと関連Dockerfileを確認。
+## Instructions for AI Assistant
 
-### 禁止事項
-- ハードコーディングされたパスワードやAPIキー
-- 非効率なデータベースクエリ
-- セキュリティホール（SQLインジェクション、XSSなど）
-- 不要な依存関係の追加
 
-### 推奨ツール使用
-- **コード編集**: replace_string_in_file または insert_edit_into_file
-- **ファイル作成**: create_file
-- **ターミナル実行**: run_in_terminal（Dockerコマンドなど）
-- **テスト実行**: runTests
-- **ファイル検索**: grep_search または semantic_search
+### Considerations for Code Generation
+1. **Security First**: Use environment variables for sensitive data. Do not hardcode.
+2. **Containerization Ready**: Follow Docker best practices to create lightweight images.
+3. **Django Best Practices**: Properly separate view functions, models, and templates.
+4. **Error Handling**: Implement proper exception handling and log output.
+5. **Performance**: Optimize database queries and utilize caching.
 
-## 貢献ガイド
-1. developブランチからフィーチャーブランチを作成
-2. 変更を実装し、テストを追加
-3. プルリクエストを作成し、レビューを依頼
-4. マージ後、必要に応じてドキュメント更新
+### Guidelines for Support
+1. **Adding New Features**: Adhere to existing structure. Create migrations as needed.
+2. **Bug Fixes**: Add test cases to prevent regressions.
+3. **Document Updates**: Update README.md and this AGENTS.md when modifying code.
+4. **Dependencies**: Update requirements.txt when adding new packages.
+5. **Docker Configuration**: Verify docker-compose.yml and related Dockerfiles when making changes.
 
-## 連絡先
-質問や改善提案は、GitHub IssuesまたはPull Requestsをご利用ください。
+### Prohibited Actions
+- Hard-coded passwords or API keys
+- Inefficient database queries
+- Security vulnerabilities (SQL injection, XSS, etc.)
+- Adding unnecessary dependencies
+
+### Recommended Tool Usage
+- **Code Editing**: `replace_string_in_file` or `insert_edit_into_file`
+- **File Creation**: `create_file`
+- **Terminal Execution**: run_in_terminal (e.g., Docker commands)
+- **Test Execution**: runTests
+- **File Search**: grep_search or semantic_search
+
+## Contribution Guide
+1. Create a feature branch from the develop branch
+2. If the current branch is main, create the feature branch from main.
+2. Implement changes and add tests.
+3. Create a pull request and request a review.
+4. After merging, update documentation as needed.
+
+## Contact
+Please use GitHub Issues or Pull Requests for questions or improvement suggestions.
 
 ---
-最終更新: 2025年8月31日
+Last updated: August 31, 2025
