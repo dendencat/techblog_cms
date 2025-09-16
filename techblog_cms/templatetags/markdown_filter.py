@@ -19,7 +19,7 @@ def markdown_to_html(text):
         'toc',             # Table of contents
         'fenced_code',     # Fenced code blocks
         'nl2br',           # Convert newlines to <br>
-        'linkify',         # Auto-link plain URLs
+        'markdown.extensions.linkify',  # Auto-link plain URLs
     ], extension_configs={
         'codehilite': {
             'linenums': False,  # Disable line numbers
