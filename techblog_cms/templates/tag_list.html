@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Tags - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">タグ一覧</h1>
+
+    {% if tags %}
+    <div class="flex flex-wrap gap-3">
+        {% for tag in tags %}
+        <a href="{% url 'tag' slug=tag.slug %}"
+           class="px-4 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-blue-100 hover:text-blue-700 transition">
+            #{{ tag.name }}
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-500">タグはまだ登録されていません。</p>
+    {% endif %}
+</div>
+{% endblock %}

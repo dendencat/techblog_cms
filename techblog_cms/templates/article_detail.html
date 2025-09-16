@@ -226,7 +226,10 @@
         <header class="mb-6">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ article.title }}</h1>
             <div class="text-sm text-gray-500">
-                <span>Published: {{ article.created_at|date:"M d, Y" }}</span>
+                <span>Published: {{ article.created_at|date:"M d, Y H:i" }}</span>
+                {% if article.updated_at and article.updated_at != article.created_at %}
+                <span class="ml-4">Updated: {{ article.updated_at|date:"M d, Y H:i" }}</span>
+                {% endif %}
                 {% if article.category %}
                 <span class="ml-4">Category: 
                     <a href="{% url 'category' article.category.slug %}" class="text-blue-500 hover:underline">

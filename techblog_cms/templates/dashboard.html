@@ -211,6 +211,10 @@
             <small style="color: #6b7280; margin-left: 10px;">{{ a.created_at|date:'Y-m-d H:i' }}</small>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
+            <a href="{% url 'article_edit' a.slug %}"
+               style="color: #2563eb; text-decoration: none; font-weight: 600;">
+              編集
+            </a>
             {% if not a.published %}
               <span style="background-color: #6b7280; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">下書き</span>
             {% endif %}

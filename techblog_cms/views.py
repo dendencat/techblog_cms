@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
-from .models import Article, Category
+from .models import Article, Category, Tag
 from techblog_cms.templatetags.markdown_filter import markdown_to_html
 from django.conf import settings
 from django.http import HttpResponseNotFound
@@ -18,20 +18,91 @@ def index(request):
 
 def home_view(request):
     articles = Article.objects.filter(published=True).order_by('-created_at')[:10]
-    return render(request, 'home.html', {'articles': articles})
+    categories = Category.objects.all()
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'home.html',
+        {
+            'articles': articles,
+            'categories': categories,
+            'tags': tags,
+        },
+    )
 
 def article_list_view(request):
     articles = Article.objects.filter(published=True).order_by('-created_at')
-    return render(request, 'article_list.html', {'articles': articles})
+    categories = Category.objects.all()
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'article_list.html',
+        {
+            'articles': articles,
+            'categories': categories,
+            'tags': tags,
+        },
+    )
 
 def categories_view(request):
     categories = Category.objects.all()
-    return render(request, 'category_list.html', {'categories': categories})
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'category_list.html',
+        {
+            'categories': categories,
+            'tags': tags,
+        },
+    )
 
 def category_view(request, slug):
     category = get_object_or_404(Category, slug=slug)
     articles = category.article_set.filter(published=True).order_by('-created_at')
-    return render(request, 'category_detail.html', {'category': category, 'articles': articles})
+    categories = Category.objects.all()
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'category_detail.html',
+        {
+            'category': category,
+            'articles': articles,
+            'categories': categories,
+            'tags': tags,
+        },
+    )
+
+def tags_view(request):
+    tags = Tag.objects.all()
+    categories = Category.objects.all()
+    return render(
+        request,
+        'tag_list.html',
+        {
+            'tags': tags,
+            'categories': categories,
+        },
+    )
+
+def tag_view(request, slug):
+    tag = get_object_or_404(Tag, slug=slug)
+    if request.user.is_authenticated:
+        articles = tag.article_set.order_by('-created_at')
+    else:
+        articles = tag.article_set.filter(published=True).order_by('-created_at')
+
+    categories = Category.objects.all()
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'tag_detail.html',
+        {
+            'tag': tag,
+            'articles': articles,
+            'categories': categories,
+            'tags': tags,
+        },
+    )
 
 def article_detail_view(request, slug):
     # ログインしている場合は下書き記事も表示可能
@@ -39,7 +110,17 @@ def article_detail_view(request, slug):
         article = get_object_or_404(Article, slug=slug)
     else:
         article = get_object_or_404(Article, slug=slug, published=True)
-    return render(request, 'article_detail.html', {'article': article})
+    categories = Category.objects.all()
+    tags = Tag.objects.all()
+    return render(
+        request,
+        'article_detail.html',
+        {
+            'article': article,
+            'categories': categories,
+            'tags': tags,
+        },
+    )
 def admin_guard(request):
     """Direct /admin/ access guard. Show 404 if HIDE_ADMIN_URL is True."""
     if getattr(settings, 'HIDE_ADMIN_URL', False):
@@ -55,15 +136,15 @@ def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        print(f"Username: {username}, Password: {password}")
+        
+        # Use Django's authenticate function but ensure consistent behavior
         user = authenticate(username=username, password=password)
-        print(f"User: {user}")
         if user is not None:
-            print("Login successful")
             login(request, user)
             return redirect('dashboard')
         else:
-            return render(request, 'login.html', {"error": "ユーザー名またはパスワードが違います。"}, status=401)
+            # Generic error message to prevent username enumeration
+            return render(request, 'login.html', {"error": "Invalid credentials"}, status=401)
     return render(request, 'login.html')
 
 
@@ -125,40 +206,52 @@ def article_delete_success_view(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def article_editor_view(request):
+def article_editor_view(request, slug=None):
+    article = get_object_or_404(Article, slug=slug) if slug else None
+
     if request.method == 'POST':
-        title = request.POST.get('title')
-        content = request.POST.get('content')
+        title = (request.POST.get('title') or '').strip()
+        content = (request.POST.get('content') or '').strip()
         action = request.POST.get('action')  # 'save' or 'publish'
-        
+
         if not title or not content:
-            return render(request, 'article_editor.html', {"error": "タイトルと本文は必須です。"})
-        
-        # デフォルトのカテゴリを取得（存在しない場合は作成）
-        category, created = Category.objects.get_or_create(
-            name='General',
-            defaults={'description': 'General articles'}
-        )
-        
-        # ユニークなslugを生成
-        base_slug = title.lower().replace(' ', '-').replace('/', '-')
-        slug = base_slug
-        counter = 1
-        while Article.objects.filter(slug=slug).exists():
-            slug = f"{base_slug}-{counter}"
-            counter += 1
-        
-        # 記事作成時にカテゴリを指定
+            context = {
+                "error": "タイトルと本文は必須です。",
+                "article": article,
+                "title_value": title,
+                "content_value": content,
+            }
+            return render(request, 'article_editor.html', context)
+
         published = action == 'publish'
-        article = Article.objects.create(
-            title=title, 
-            content=content, 
-            slug=slug,
-            category=category,
-            published=published  # アクションに応じて公開状態を設定
-        )
+
+        if article:
+            article.title = title
+            article.content = content
+            if published:
+                article.published = True
+            article.save()
+        else:
+            category, _ = Category.objects.get_or_create(
+                name='General',
+                defaults={'description': 'General articles'}
+            )
+            article = Article(
+                title=title,
+                content=content,
+                category=category,
+                published=published,
+            )
+            article.save()
+
         return redirect('dashboard')
-    return render(request, 'article_editor.html')
+
+    context = {
+        'article': article,
+        'title_value': getattr(article, 'title', ''),
+        'content_value': getattr(article, 'content', ''),
+    }
+    return render(request, 'article_editor.html', context)
 
 
 @login_required
