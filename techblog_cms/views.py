@@ -206,40 +206,52 @@ def article_delete_success_view(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def article_editor_view(request):
+def article_editor_view(request, slug=None):
+    article = get_object_or_404(Article, slug=slug) if slug else None
+
     if request.method == 'POST':
-        title = request.POST.get('title')
-        content = request.POST.get('content')
+        title = (request.POST.get('title') or '').strip()
+        content = (request.POST.get('content') or '').strip()
         action = request.POST.get('action')  # 'save' or 'publish'
-        
+
         if not title or not content:
-            return render(request, 'article_editor.html', {"error": "タイトルと本文は必須です。"})
-        
-        # デフォルトのカテゴリを取得（存在しない場合は作成）
-        category, created = Category.objects.get_or_create(
-            name='General',
-            defaults={'description': 'General articles'}
-        )
-        
-        # ユニークなslugを生成
-        base_slug = title.lower().replace(' ', '-').replace('/', '-')
-        slug = base_slug
-        counter = 1
-        while Article.objects.filter(slug=slug).exists():
-            slug = f"{base_slug}-{counter}"
-            counter += 1
-        
-        # 記事作成時にカテゴリを指定
+            context = {
+                "error": "タイトルと本文は必須です。",
+                "article": article,
+                "title_value": title,
+                "content_value": content,
+            }
+            return render(request, 'article_editor.html', context)
+
         published = action == 'publish'
-        article = Article.objects.create(
-            title=title, 
-            content=content, 
-            slug=slug,
-            category=category,
-            published=published  # アクションに応じて公開状態を設定
-        )
+
+        if article:
+            article.title = title
+            article.content = content
+            if published:
+                article.published = True
+            article.save()
+        else:
+            category, _ = Category.objects.get_or_create(
+                name='General',
+                defaults={'description': 'General articles'}
+            )
+            article = Article(
+                title=title,
+                content=content,
+                category=category,
+                published=published,
+            )
+            article.save()
+
         return redirect('dashboard')
-    return render(request, 'article_editor.html')
+
+    context = {
+        'article': article,
+        'title_value': getattr(article, 'title', ''),
+        'content_value': getattr(article, 'content', ''),
+    }
+    return render(request, 'article_editor.html', context)
 
 
 @login_required

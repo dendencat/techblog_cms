@@ -18,6 +18,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('dashboard/articles/new/', views.article_editor_view, name='article_new'),
+    re_path(r'^dashboard/articles/(?P<slug>[\w\-]+)/edit/$', views.article_editor_view, name='article_edit'),
     re_path(r'^dashboard/articles/(?P<slug>[\w\-]+)/delete/$', views.article_delete_view, name='article_delete'),
     path('dashboard/articles/delete/success/', views.article_delete_success_view, name='article_delete_success'),
     path('api/health/', views.health_check, name='health_check'),

@@ -16,9 +16,10 @@ def markdown_to_html(text):
     html = markdown.markdown(text, extensions=[
         'extra',           # Extra features like tables, footnotes, and raw HTML
         'codehilite',      # Code highlighting with Pygments
-        'toc',            # Table of contents
+        'toc',             # Table of contents
         'fenced_code',     # Fenced code blocks
-        'nl2br',          # Convert newlines to <br>
+        'nl2br',           # Convert newlines to <br>
+        'linkify',         # Auto-link plain URLs
     ], extension_configs={
         'codehilite': {
             'linenums': False,  # Disable line numbers

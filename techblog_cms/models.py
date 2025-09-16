@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.utils.text import slugify
 from django.urls import reverse
@@ -51,9 +52,17 @@ class Article(models.Model):
     tags = models.ManyToManyField(Tag, blank=True)
     image = models.ImageField(upload_to='articles/', blank=True, null=True)
 
+    def _generate_unique_slug(self):
+        base_slug = slugify(self.title) or 'article'
+        while True:
+            hash_fragment = uuid.uuid4().hex[:8]
+            candidate = f"{base_slug}-{hash_fragment}"
+            if not Article.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
+                return candidate
+
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title)
+            self.slug = self._generate_unique_slug()
         if not self.excerpt and self.content:
             self.excerpt = self.content[:200]
         super().save(*args, **kwargs)
@@ -62,4 +71,4 @@ class Article(models.Model):
         return self.title
 
     def get_absolute_url(self):
-        return reverse('article', kwargs={'slug': self.slug})
+        return reverse('article_detail', kwargs={'slug': self.slug})
