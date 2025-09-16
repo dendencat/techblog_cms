@@ -31,12 +31,12 @@
         {% include 'components/header.html' %}
     {% endblock %}
 
-    <div class="container mx-auto mt-6 px-4">
-        <div class="flex flex-col md:flex-row">
+    <div class="container mx-auto px-4 pt-24 md:pt-28">
+        <div class="flex flex-col md:flex-row md:items-start gap-8">
             {% block sidebar %}
                 {% include 'components/sidebar.html' %}
             {% endblock %}
-            
+
             {% block content %}
                 {% include 'components/main_content.html' %}
             {% endblock %}
@@ -44,7 +44,7 @@
     </div>
 
     {% block scripts %}
-    <script src="{% static 'js/article.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
     {% endblock %}
 </body>
 </html>
