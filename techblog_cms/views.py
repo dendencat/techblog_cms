@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
+from PIL import Image, UnidentifiedImageError
 from .models import Article, Category, Tag
 from techblog_cms.templatetags.markdown_filter import markdown_to_html
 from django.conf import settings
@@ -130,6 +131,83 @@ def admin_guard(request):
 # Create your views here.
 
 
+def validate_article_image(uploaded_file):
+    """
+    Validate uploaded article image and rewind the file ready for storage.
+
+    Returns:
+        tuple(UploadedFile|None, str|None): (clean_file, error_message)
+    """
+    if not uploaded_file:
+        return None, None
+
+    max_bytes = getattr(settings, 'ARTICLE_IMAGE_MAX_BYTES', None)
+    allowed_formats = getattr(settings, 'ARTICLE_IMAGE_ALLOWED_FORMATS', ())
+    max_pixels = getattr(settings, 'ARTICLE_IMAGE_MAX_PIXELS', None)
+
+    if max_bytes and uploaded_file.size and uploaded_file.size > max_bytes:
+        try:
+            uploaded_file.seek(0)
+        except (AttributeError, OSError):
+            pass
+        return None, f"Image exceeds the maximum allowed size of {max_bytes} bytes."
+
+    try:
+        uploaded_file.seek(0)
+    except (AttributeError, OSError):
+        pass
+
+    try:
+        with Image.open(uploaded_file) as image:
+            image.verify()
+
+        uploaded_file.seek(0)
+        with Image.open(uploaded_file) as image:
+            detected_format = (image.format or '').upper()
+            width, height = image.size
+    except Image.DecompressionBombError:
+        try:
+            uploaded_file.seek(0)
+        except (AttributeError, OSError):
+            pass
+        return None, "Image exceeds the maximum allowed pixel count."
+    except UnidentifiedImageError:
+        try:
+            uploaded_file.seek(0)
+        except (AttributeError, OSError):
+            pass
+        return None, "Uploaded file is not a valid image."
+    except OSError:
+        try:
+            uploaded_file.seek(0)
+        except (AttributeError, OSError):
+            pass
+        return None, "Uploaded file could not be processed as an image."
+
+    total_pixels = width * height
+    if max_pixels and total_pixels > max_pixels:
+        try:
+            uploaded_file.seek(0)
+        except (AttributeError, OSError):
+            pass
+        return None, f"Image exceeds the maximum allowed pixel count of {max_pixels}."
+
+    if allowed_formats and detected_format not in allowed_formats:
+        try:
+            uploaded_file.seek(0)
+        except (AttributeError, OSError):
+            pass
+        allowed_display = ", ".join(allowed_formats)
+        return None, f"Unsupported image format. Allowed formats: {allowed_display}."
+
+    try:
+        uploaded_file.seek(0)
+    except (AttributeError, OSError):
+        pass
+
+    return uploaded_file, None
+
+
 @require_http_methods(["GET", "POST"])
 @csrf_exempt
 def login_view(request):
@@ -208,20 +286,41 @@ def article_delete_success_view(request):
 @require_http_methods(["GET", "POST"])
 def article_editor_view(request, slug=None):
     article = get_object_or_404(Article, slug=slug) if slug else None
+    image_help_text = (
+        f"Supported formats: {', '.join(settings.ARTICLE_IMAGE_ALLOWED_FORMATS)}. "
+        f"Max size: {settings.ARTICLE_IMAGE_MAX_BYTES} bytes. "
+        f"Max pixels: {settings.ARTICLE_IMAGE_MAX_PIXELS:,}."
+    )
+
+    def render_editor(title_value, content_value, error=None, image_error=None):
+        return render(
+            request,
+            'article_editor.html',
+            {
+                "error": error,
+                "image_error": image_error,
+                "article": article,
+                "title_value": title_value,
+                "content_value": content_value,
+                "image_help_text": image_help_text,
+            },
+        )
 
     if request.method == 'POST':
         title = (request.POST.get('title') or '').strip()
         content = (request.POST.get('content') or '').strip()
         action = request.POST.get('action')  # 'save' or 'publish'
+        uploaded_image = request.FILES.get('image')
+
+        if uploaded_image:
+            cleaned_image, image_error = validate_article_image(uploaded_image)
+            if image_error:
+                return render_editor(title, content, image_error=image_error)
+        else:
+            cleaned_image = None
 
         if not title or not content:
-            context = {
-                "error": "タイトルと本文は必須です。",
-                "article": article,
-                "title_value": title,
-                "content_value": content,
-            }
-            return render(request, 'article_editor.html', context)
+            return render_editor(title, content, error="タイトルと本文は必須です。")
 
         published = action == 'publish'
 
@@ -230,6 +329,8 @@ def article_editor_view(request, slug=None):
             article.content = content
             if published:
                 article.published = True
+            if cleaned_image:
+                article.image = cleaned_image
             article.save()
         else:
             category, _ = Category.objects.get_or_create(
@@ -242,16 +343,15 @@ def article_editor_view(request, slug=None):
                 category=category,
                 published=published,
             )
+            if cleaned_image:
+                article.image = cleaned_image
             article.save()
 
         return redirect('dashboard')
 
-    context = {
-        'article': article,
-        'title_value': getattr(article, 'title', ''),
-        'content_value': getattr(article, 'content', ''),
-    }
-    return render(request, 'article_editor.html', context)
+    title_value = getattr(article, 'title', '')
+    content_value = getattr(article, 'content', '')
+    return render_editor(title_value, content_value)
 
 
 @login_required

@@ -129,6 +129,13 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Article asset tuning knobs (overridable via environment variables)
+ARTICLE_IMAGE_MAX_BYTES = config('ARTICLE_IMAGE_MAX_BYTES', default=5 * 1024 * 1024, cast=int)
+ARTICLE_IMAGE_ALLOWED_FORMATS = tuple(
+    fmt.upper() for fmt in config('ARTICLE_IMAGE_ALLOWED_FORMATS', default='JPEG,PNG,GIF,WEBP', cast=Csv())
+)
+ARTICLE_IMAGE_MAX_PIXELS = config('ARTICLE_IMAGE_MAX_PIXELS', default=20_000_000, cast=int)
+
 # Admin hardening
 HIDE_ADMIN_URL = True
 
@@ -296,4 +303,3 @@ if 'test' in sys.argv:
     PASSWORD_HASHERS = [
         'django.contrib.auth.hashers.MD5PasswordHasher',
     ]
-
