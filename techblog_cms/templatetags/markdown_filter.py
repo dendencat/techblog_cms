@@ -1,8 +1,18 @@
+import importlib
+import logging
 import markdown
 from django import template
 from django.utils.safestring import mark_safe
 
 register = template.Library()
+logger = logging.getLogger(__name__)
+
+LINKIFY_EXTENSION = None
+try:
+    importlib.import_module('markdown.extensions.linkify')
+    LINKIFY_EXTENSION = 'markdown.extensions.linkify'
+except ModuleNotFoundError:
+    logger.warning('markdown.extensions.linkify not available; auto-linking disabled.')
 
 @register.filter
 def markdown_to_html(text):
@@ -12,20 +22,22 @@ def markdown_to_html(text):
     if not text:
         return ''
 
-    # Convert markdown to HTML with Pygments for syntax highlighting
-    html = markdown.markdown(text, extensions=[
-        'extra',           # Extra features like tables, footnotes, and raw HTML
-        'codehilite',      # Code highlighting with Pygments
-        'toc',             # Table of contents
-        'fenced_code',     # Fenced code blocks
-        'nl2br',           # Convert newlines to <br>
-        'markdown.extensions.linkify',  # Auto-link plain URLs
-    ], extension_configs={
+    extensions = [
+        'extra',
+        'codehilite',
+        'toc',
+        'fenced_code',
+        'nl2br',
+    ]
+    if LINKIFY_EXTENSION:
+        extensions.append(LINKIFY_EXTENSION)
+
+    html = markdown.markdown(text, extensions=extensions, extension_configs={
         'codehilite': {
-            'linenums': False,  # Disable line numbers
-            'guess_lang': True,  # Guess language if not specified
-            'css_class': 'highlight',  # CSS class for code blocks
-            'pygments_style': 'github-dark',  # Use GitHub-like dark theme
+            'linenums': False,
+            'guess_lang': True,
+            'css_class': 'highlight',
+            'pygments_style': 'github-dark',
         }
     })
 
