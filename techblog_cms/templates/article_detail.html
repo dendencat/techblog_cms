@@ -100,6 +100,14 @@
 .highlight .vm { color: #ffa657 } /* Name.Variable.Magic */
 .highlight .il { color: #79c0ff } /* Literal.Number.Integer.Long */
 
+.article-hero-image {
+    width: 100%;
+    max-height: 420px;
+    object-fit: cover;
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+}
+
 .markdown-content h1 {
     font-size: 1.875rem;
     font-weight: bold;
@@ -202,6 +210,16 @@
     padding: 0;
 }
 
+.markdown-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1.5rem auto;
+    border-radius: 0.75rem;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    background-color: #fff;
+}
+
 .markdown-content table {
     width: 100%;
     border-collapse: collapse;
@@ -239,6 +257,12 @@
                 {% endif %}
             </div>
         </header>
+
+        {% if article.image %}
+        <div class="article-hero mb-6">
+            <img src="{{ article.image.url }}" alt="{{ article.title }}" class="article-hero-image">
+        </div>
+        {% endif %}
 
         <div class="prose max-w-none markdown-content">
             {% if article.excerpt and article.excerpt != article.content %}

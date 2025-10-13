@@ -114,6 +114,9 @@ class ArticleEditingTests(TestCase):
         self.assertTrue(refreshed.image.name.startswith("articles/"))
         self.assertTrue(refreshed.image.name.endswith(".png"))
 
+        detail_response = self.client.get(reverse("article_detail", args=[refreshed.slug]))
+        self.assertContains(detail_response, refreshed.image.url)
+
     def test_plain_text_upload_is_rejected(self):
         self.client.login(username="editor", password="pass1234")
         url = reverse("article_edit", args=[self.article.slug])
@@ -160,3 +163,13 @@ class MarkdownRenderingTests(TestCase):
     def test_plain_urls_are_linkified(self):
         html = markdown_to_html("Check https://example.com for details")
         self.assertIn('<a href="https://example.com">https://example.com</a>', html)
+
+    def test_relative_image_paths_use_media_url(self):
+        with override_settings(MEDIA_URL='/media/'):
+            html = markdown_to_html("![Infra diagram](diagram.png)")
+        self.assertIn('src="/media/articles/diagram.png"', html)
+
+    def test_articles_prefixed_image_paths_are_preserved(self):
+        with override_settings(MEDIA_URL='/media/'):
+            html = markdown_to_html("![Infra diagram](articles/diagram.png)")
+        self.assertIn('src="/media/articles/diagram.png"', html)

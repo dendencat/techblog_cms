@@ -1,7 +1,9 @@
 import importlib
 import logging
+import re
 import markdown
 from django import template
+from django.conf import settings
 from django.utils.safestring import mark_safe
 
 register = template.Library()
@@ -13,6 +15,36 @@ try:
     LINKIFY_EXTENSION = 'markdown.extensions.linkify'
 except ModuleNotFoundError:
     logger.warning('markdown.extensions.linkify not available; auto-linking disabled.')
+
+IMG_TAG_SRC_PATTERN = re.compile(r'(<img[^>]+src=")([^"]+)(")')
+RELATIVE_URI_PATTERN = re.compile(r'^(?:https?:|data:|/)', re.IGNORECASE)
+
+
+def _resolve_image_source(src: str) -> str:
+    """Translate a user-provided Markdown image reference into a public media URL."""
+    if not src:
+        return ''
+    candidate = src.strip()
+    if not candidate or RELATIVE_URI_PATTERN.match(candidate):
+        return candidate
+
+    media_url = getattr(settings, 'MEDIA_URL', '/media/').rstrip('/') or '/media'
+    if candidate.startswith('articles/'):
+        path = candidate
+    else:
+        path = f"articles/{candidate.lstrip('/')}"
+    return f"{media_url}/{path}"
+
+
+def _rewrite_image_sources(html: str) -> str:
+    if not html:
+        return html
+
+    def _replace(match: re.Match) -> str:
+        prefix, src, suffix = match.groups()
+        return f'{prefix}{_resolve_image_source(src)}{suffix}'
+
+    return IMG_TAG_SRC_PATTERN.sub(_replace, html)
 
 @register.filter
 def markdown_to_html(text):
@@ -41,4 +73,4 @@ def markdown_to_html(text):
         }
     })
 
-    return mark_safe(html)
+    return mark_safe(_rewrite_image_sources(html))

@@ -33,12 +33,27 @@
         {% if image_error %}
         <p class="mt-1 text-sm text-red-600">{{ image_error }}</p>
         {% endif %}
-        {% if article and article.image %}
-        <div class="mt-3">
-          <p class="text-sm text-gray-600 mb-2">現在の画像プレビュー</p>
-          <img src="{{ article.image.url }}" alt="{{ article.title }}" class="max-h-48 rounded shadow-sm">
+        <div id="image-preview-frame"
+             class="mt-3 {% if not article or not article.image %}hidden{% endif %}"
+             {% if article and article.image %}
+             data-initial-url="{{ article.image.url }}"
+             data-initial-name="{{ article.image.name|cut:'articles/' }}"
+             {% endif %}>
+          <p class="text-sm text-gray-600 mb-2">選択した画像プレビュー</p>
+          <div class="rounded border border-gray-300 bg-white p-3 shadow-sm">
+            <img id="image-preview"
+                 src="{% if article and article.image %}{{ article.image.url }}{% endif %}"
+                 alt="{% if article %}{{ article.title }}{% else %}記事画像{% endif %}"
+                 class="max-h-48 mx-auto rounded object-contain" />
+          </div>
+          <p class="mt-2 text-xs text-gray-500 leading-relaxed">
+            Markdown から画像を挿入する場合はファイル名
+            <code id="image-preview-filename" class="px-1 py-0.5 bg-gray-100 rounded">
+              {% if article and article.image %}{{ article.image.name|cut:'articles/' }}{% endif %}
+            </code>
+            を使用してください。
+          </p>
         </div>
-        {% endif %}
       </div>
 
       <!-- 書式バー -->
@@ -48,6 +63,7 @@
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="h3" title="見出し3" aria-label="見出し3">H3</button>
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="bold" title="太字" aria-label="太字"><strong>B</strong></button>
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="italic" title="斜体" aria-label="斜体"><em>I</em></button>
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="image" title="画像" aria-label="画像">🖼️</button>
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="link" title="リンク" aria-label="リンク">🔗</button>
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="code" title="コード" aria-label="コード">`</button>
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="list" title="リスト" aria-label="リスト">•</button>
@@ -74,6 +90,27 @@
   <!-- プレビュー -->
   <div class="preview-section flex-1 min-w-0 flex flex-col">
     <h2 class="mb-5 text-xl font-semibold">プレビュー</h2>
+    <div id="header-image-preview-wrapper"
+         class="header-image-preview mb-4 hidden border border-gray-300 bg-white rounded overflow-hidden"
+         {% if article and article.image %}
+         data-initial-url="{{ article.image.url }}"
+         data-initial-name="{{ article.image.name|cut:'articles/' }}"
+         {% endif %}>
+      <div class="bg-gray-100 border-b border-gray-200 px-3 py-2 text-sm text-gray-600">
+        ヘッダー画像プレビュー
+      </div>
+      <div class="p-3">
+        <img id="header-image-preview-img"
+             src=""
+             alt="ヘッダー画像プレビュー"
+             class="w-full max-h-64 object-contain rounded" />
+      </div>
+      <div class="px-3 pb-3 text-xs text-gray-500">
+        Markdown から参照する場合は
+        <code id="header-image-preview-filename" class="px-1 py-0.5 bg-gray-100 rounded"></code>
+        を使用してください。
+      </div>
+    </div>
     <div id="preview" class="markdown-preview flex-1 p-4 border border-gray-300 rounded bg-gray-50 overflow-y-auto">
       <p class="text-gray-500 italic">プレビューがここに表示されます...</p>
     </div>
@@ -135,9 +172,37 @@
 .markdown-preview ul, .markdown-preview ol { margin: 10px 0; padding-left: 20px; }
 .markdown-preview a { color: #007bff; text-decoration: none; }
 .markdown-preview a:hover { text-decoration: underline; }
+.markdown-preview img { max-width: 100%; height: auto; display: block; margin: 0.75em auto; border-radius: 0.5rem; background: #fff; padding: 4px; box-shadow: 0 1px 4px rgba(15,23,42,0.12); }
 </style>
 
 <script>
+const MEDIA_URL_TEMPLATE = "{{ MEDIA_URL|default:'/media/'|escapejs }}";
+const MEDIA_URL = MEDIA_URL_TEMPLATE || '/media/';
+const MEDIA_URL_BASE = MEDIA_URL.replace(/\/$/, '');
+const ARTICLE_MEDIA_SUBDIR = 'articles/';
+
+function resolveMediaPath(rawSrc) {
+  if (!rawSrc) {
+    return '';
+  }
+  const trimmed = rawSrc.trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (/^(?:https?:|data:|\/)/i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.startsWith(ARTICLE_MEDIA_SUBDIR)) {
+    return `${MEDIA_URL_BASE}/${trimmed}`;
+  }
+  const normalized = trimmed.replace(/^\/+/, '');
+  return `${MEDIA_URL_BASE}/${ARTICLE_MEDIA_SUBDIR}${normalized}`;
+}
+
+function escapeAttribute(value) {
+  return String(value || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
 // マークダウン変換関数
 function markdownToHtml(markdown) {
   // 基本的な変換処理
@@ -152,8 +217,13 @@ function markdownToHtml(markdown) {
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     // インラインコード
     .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // 画像
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+      const resolvedSrc = resolveMediaPath(src);
+      return `<img src="${escapeAttribute(resolvedSrc)}" alt="${escapeAttribute(alt)}" class="markdown-inline-image">`;
+    })
     // リンク
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, href) => `<a href="${escapeAttribute(href)}">${text}</a>`)
     // リスト
     .replace(/^\- (.*$)/gim, '<li>$1</li>')
     // 引用
@@ -228,6 +298,24 @@ function applyFormatting(format) {
     case 'italic':
       replacement = selectedText ? '*' + selectedText + '*' : '**';
       break;
+    case 'image': {
+      const defaultAlt = selectedText || '画像タイトル';
+      const altInput = prompt('画像のタイトル (代替テキスト) を入力してください。', defaultAlt);
+      if (altInput === null) {
+        textarea.setSelectionRange(start, end);
+        return;
+      }
+      const filenameSuggestion = (document.getElementById('image-preview-filename')?.textContent || '').trim();
+      const fileInputName = prompt('挿入する画像ファイル名を入力してください（例: sample.png）。', filenameSuggestion || 'sample.png');
+      if (fileInputName === null || fileInputName.trim() === '') {
+        textarea.setSelectionRange(start, end);
+        return;
+      }
+      const finalAlt = altInput.trim() || defaultAlt;
+      const finalFilename = fileInputName.trim();
+      replacement = '![' + finalAlt + '](' + finalFilename + ')';
+      break;
+    }
     case 'link':
       replacement = selectedText ? '[' + selectedText + '](URL)' : '[リンクテキスト](URL)';
       break;
@@ -262,6 +350,94 @@ function applyFormatting(format) {
 document.addEventListener('DOMContentLoaded', function() {
   const textarea = document.getElementById('content');
   const formatBtns = document.querySelectorAll('.format-btn');
+  const imageInput = document.getElementById('image');
+  const imagePreviewFrame = document.getElementById('image-preview-frame');
+  const imagePreview = document.getElementById('image-preview');
+  const imagePreviewFilenameDisplay = document.getElementById('image-preview-filename');
+  const headerPreviewWrapper = document.getElementById('header-image-preview-wrapper');
+  const headerPreviewImg = document.getElementById('header-image-preview-img');
+  const headerPreviewFilenameDisplay = document.getElementById('header-image-preview-filename');
+
+  const extractFileName = (path) => {
+    if (!path) {
+      return '';
+    }
+    const normalized = path.split('?')[0];
+    const parts = normalized.split('/').filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : normalized;
+  };
+
+  const setInlinePreview = (src, filename) => {
+    if (!imagePreviewFrame || !imagePreview) {
+      return;
+    }
+    if (src) {
+      imagePreview.src = src;
+      imagePreview.alt = filename || '選択した画像プレビュー';
+      imagePreviewFrame.classList.remove('hidden');
+      if (imagePreviewFilenameDisplay) {
+        imagePreviewFilenameDisplay.textContent = filename || extractFileName(src);
+      }
+    } else {
+      imagePreview.removeAttribute('src');
+      imagePreviewFrame.classList.add('hidden');
+      if (imagePreviewFilenameDisplay) {
+        imagePreviewFilenameDisplay.textContent = '';
+      }
+    }
+  };
+
+  const setHeaderPreview = (src, filename) => {
+    if (!headerPreviewWrapper || !headerPreviewImg) {
+      return;
+    }
+    if (src) {
+      headerPreviewImg.src = src;
+      headerPreviewImg.alt = filename || 'ヘッダー画像プレビュー';
+      headerPreviewWrapper.classList.remove('hidden');
+      if (headerPreviewFilenameDisplay) {
+        headerPreviewFilenameDisplay.textContent = filename || extractFileName(src);
+      }
+    } else {
+      headerPreviewImg.removeAttribute('src');
+      headerPreviewWrapper.classList.add('hidden');
+      if (headerPreviewFilenameDisplay) {
+        headerPreviewFilenameDisplay.textContent = '';
+      }
+    }
+  };
+
+  const initialInlineUrl = imagePreviewFrame?.dataset.initialUrl;
+  const initialInlineName = imagePreviewFrame?.dataset.initialName;
+  const initialHeaderUrl = headerPreviewWrapper?.dataset.initialUrl;
+  const initialHeaderName = headerPreviewWrapper?.dataset.initialName;
+
+  if (initialInlineUrl) {
+    setInlinePreview(initialInlineUrl, initialInlineName || extractFileName(initialInlineUrl));
+    setHeaderPreview(initialInlineUrl, initialInlineName || extractFileName(initialInlineUrl));
+  } else if (initialHeaderUrl) {
+    setInlinePreview(initialHeaderUrl, initialHeaderName || extractFileName(initialHeaderUrl));
+    setHeaderPreview(initialHeaderUrl, initialHeaderName || extractFileName(initialHeaderUrl));
+  }
+
+  if (imageInput) {
+    imageInput.addEventListener('change', function() {
+      const file = imageInput.files && imageInput.files[0];
+      if (!file) {
+        setInlinePreview('', '');
+        setHeaderPreview('', '');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const fileSrc = e.target?.result;
+        const fileName = file.name || extractFileName(fileSrc);
+        setInlinePreview(fileSrc, fileName);
+        setHeaderPreview(fileSrc, fileName);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   // 入力時のプレビュー更新（debounce）
   textarea.addEventListener('input', updatePreviewDebounced);
