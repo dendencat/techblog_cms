@@ -6,7 +6,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from PIL import Image, UnidentifiedImageError
-from .models import Article, Category, Tag
+from .models import Article, Category, Tag, ArticleInlineImage
 from techblog_cms.templatetags.markdown_filter import markdown_to_html
 from django.conf import settings
 from django.http import HttpResponseNotFound
@@ -287,12 +287,13 @@ def article_delete_success_view(request):
 def article_editor_view(request, slug=None):
     article = get_object_or_404(Article, slug=slug) if slug else None
     image_help_text = (
-        f"Supported formats: {', '.join(settings.ARTICLE_IMAGE_ALLOWED_FORMATS)}. "
+        f"複数の画像をまとめて選択できます。Supported formats: {', '.join(settings.ARTICLE_IMAGE_ALLOWED_FORMATS)}. "
         f"Max size: {settings.ARTICLE_IMAGE_MAX_BYTES} bytes. "
         f"Max pixels: {settings.ARTICLE_IMAGE_MAX_PIXELS:,}."
     )
 
     def render_editor(title_value, content_value, error=None, image_error=None):
+        inline_images = list(article.inline_images.order_by('uploaded_at')) if article else []
         return render(
             request,
             'article_editor.html',
@@ -303,6 +304,8 @@ def article_editor_view(request, slug=None):
                 "title_value": title_value,
                 "content_value": content_value,
                 "image_help_text": image_help_text,
+                "inline_images": inline_images,
+                "media_url": settings.MEDIA_URL,
             },
         )
 
@@ -310,14 +313,15 @@ def article_editor_view(request, slug=None):
         title = (request.POST.get('title') or '').strip()
         content = (request.POST.get('content') or '').strip()
         action = request.POST.get('action')  # 'save' or 'publish'
-        uploaded_image = request.FILES.get('image')
-
-        if uploaded_image:
+        uploaded_images = request.FILES.getlist('images')
+        cleaned_images = []
+        for uploaded_image in uploaded_images:
             cleaned_image, image_error = validate_article_image(uploaded_image)
             if image_error:
-                return render_editor(title, content, image_error=image_error)
-        else:
-            cleaned_image = None
+                display_name = getattr(uploaded_image, 'name', '選択した画像')
+                return render_editor(title, content, image_error=f"{display_name}: {image_error}")
+            if cleaned_image:
+                cleaned_images.append(cleaned_image)
 
         if not title or not content:
             return render_editor(title, content, error="タイトルと本文は必須です。")
@@ -329,8 +333,6 @@ def article_editor_view(request, slug=None):
             article.content = content
             if published:
                 article.published = True
-            if cleaned_image:
-                article.image = cleaned_image
             article.save()
         else:
             category, _ = Category.objects.get_or_create(
@@ -343,9 +345,11 @@ def article_editor_view(request, slug=None):
                 category=category,
                 published=published,
             )
-            if cleaned_image:
-                article.image = cleaned_image
             article.save()
+
+        for cleaned_image in cleaned_images:
+            inline_image = ArticleInlineImage(article=article)
+            inline_image.image.save(cleaned_image.name, cleaned_image, save=True)
 
         return redirect('dashboard')
 

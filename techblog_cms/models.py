@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 from django.db import models
 from django.utils.text import slugify
 from django.urls import reverse
@@ -88,3 +89,19 @@ class Article(models.Model):
 
     def get_absolute_url(self):
         return reverse('article_detail', kwargs={'slug': self.slug})
+
+
+class ArticleInlineImage(models.Model):
+    article = models.ForeignKey(Article, related_name='inline_images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='articles/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['uploaded_at', 'pk']
+
+    @property
+    def filename(self):
+        return Path(self.image.name or '').name
+
+    def __str__(self):
+        return self.filename or f"Inline image #{self.pk}"

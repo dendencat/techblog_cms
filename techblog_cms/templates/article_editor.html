@@ -24,8 +24,8 @@
       </div>
 
       <div class="form-group mb-4">
-        <label for="image" class="font-bold">ヘッダー画像</label>
-        <input id="image" name="image" type="file" accept="image/*"
+        <label for="images" class="font-bold">記事画像 (複数可)</label>
+        <input id="images" name="images" type="file" accept="image/*" multiple
                class="mt-1 w-full px-3 py-2 border border-dashed border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-200 bg-white" />
         {% if image_help_text %}
         <p class="mt-1 text-sm text-gray-500">{{ image_help_text }}</p>
@@ -33,27 +33,35 @@
         {% if image_error %}
         <p class="mt-1 text-sm text-red-600">{{ image_error }}</p>
         {% endif %}
-        <div id="image-preview-frame"
-             class="mt-3 {% if not article or not article.image %}hidden{% endif %}"
-             {% if article and article.image %}
-             data-initial-url="{{ article.image.url }}"
-             data-initial-name="{{ article.image.name|cut:'articles/' }}"
-             {% endif %}>
-          <p class="text-sm text-gray-600 mb-2">選択した画像プレビュー</p>
-          <div class="rounded border border-gray-300 bg-white p-3 shadow-sm">
-            <img id="image-preview"
-                 src="{% if article and article.image %}{{ article.image.url }}{% endif %}"
-                 alt="{% if article %}{{ article.title }}{% else %}記事画像{% endif %}"
-                 class="max-h-48 mx-auto rounded object-contain" />
-          </div>
-          <p class="mt-2 text-xs text-gray-500 leading-relaxed">
-            Markdown から画像を挿入する場合はファイル名
-            <code id="image-preview-filename" class="px-1 py-0.5 bg-gray-100 rounded">
-              {% if article and article.image %}{{ article.image.name|cut:'articles/' }}{% endif %}
-            </code>
-            を使用してください。
-          </p>
+        <div id="pending-image-preview"
+             class="mt-3 hidden">
+          <p class="text-sm text-gray-600 mb-2">アップロード予定の画像プレビュー</p>
+          <div id="pending-image-grid" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
         </div>
+        {% if inline_images %}
+        <div class="mt-4">
+          <p class="text-sm font-semibold text-gray-700 mb-2">アップロード済みの画像</p>
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" id="existing-inline-images">
+            {% for inline_image in inline_images %}
+            <div class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden existing-inline-image"
+                 data-filename="{{ inline_image.filename }}"
+                 data-url="{{ inline_image.image.url }}">
+              <img src="{{ inline_image.image.url }}"
+                   alt="{{ inline_image.filename }}"
+                   class="w-full h-48 object-cover bg-gray-100" />
+              <div class="px-3 py-2 text-xs text-gray-600 space-y-1">
+                <div>ファイル名:
+                  <code class="bg-gray-100 px-1 py-0.5 rounded image-filename">{{ inline_image.filename }}</code>
+                </div>
+                <div>Markdown:
+                  <code class="bg-gray-100 px-1 py-0.5 rounded break-all">![タイトル]({{ inline_image.filename }})</code>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
       </div>
 
       <!-- 書式バー -->
@@ -90,27 +98,6 @@
   <!-- プレビュー -->
   <div class="preview-section flex-1 min-w-0 flex flex-col">
     <h2 class="mb-5 text-xl font-semibold">プレビュー</h2>
-    <div id="header-image-preview-wrapper"
-         class="header-image-preview mb-4 hidden border border-gray-300 bg-white rounded overflow-hidden"
-         {% if article and article.image %}
-         data-initial-url="{{ article.image.url }}"
-         data-initial-name="{{ article.image.name|cut:'articles/' }}"
-         {% endif %}>
-      <div class="bg-gray-100 border-b border-gray-200 px-3 py-2 text-sm text-gray-600">
-        ヘッダー画像プレビュー
-      </div>
-      <div class="p-3">
-        <img id="header-image-preview-img"
-             src=""
-             alt="ヘッダー画像プレビュー"
-             class="w-full max-h-64 object-contain rounded" />
-      </div>
-      <div class="px-3 pb-3 text-xs text-gray-500">
-        Markdown から参照する場合は
-        <code id="header-image-preview-filename" class="px-1 py-0.5 bg-gray-100 rounded"></code>
-        を使用してください。
-      </div>
-    </div>
     <div id="preview" class="markdown-preview flex-1 p-4 border border-gray-300 rounded bg-gray-50 overflow-y-auto">
       <p class="text-gray-500 italic">プレビューがここに表示されます...</p>
     </div>
@@ -176,7 +163,7 @@
 </style>
 
 <script>
-const MEDIA_URL_TEMPLATE = "{{ MEDIA_URL|default:'/media/'|escapejs }}";
+const MEDIA_URL_TEMPLATE = "{{ media_url|default:'/media/'|escapejs }}";
 const MEDIA_URL = MEDIA_URL_TEMPLATE || '/media/';
 const MEDIA_URL_BASE = MEDIA_URL.replace(/\/$/, '');
 const ARTICLE_MEDIA_SUBDIR = 'articles/';
@@ -274,6 +261,18 @@ async function updatePreview() {
 }
 const updatePreviewDebounced = debounce(updatePreview, 250);
 
+let lastImageFilename = '';
+
+function updateLastImageFilename(name) {
+  if (typeof name !== 'string') {
+    return;
+  }
+  const trimmed = name.trim();
+  if (trimmed) {
+    lastImageFilename = trimmed;
+  }
+}
+
 // 書式ボタンの処理
 function applyFormatting(format) {
   const textarea = document.getElementById('content');
@@ -305,7 +304,7 @@ function applyFormatting(format) {
         textarea.setSelectionRange(start, end);
         return;
       }
-      const filenameSuggestion = (document.getElementById('image-preview-filename')?.textContent || '').trim();
+      const filenameSuggestion = lastImageFilename;
       const fileInputName = prompt('挿入する画像ファイル名を入力してください（例: sample.png）。', filenameSuggestion || 'sample.png');
       if (fileInputName === null || fileInputName.trim() === '') {
         textarea.setSelectionRange(start, end);
@@ -314,6 +313,7 @@ function applyFormatting(format) {
       const finalAlt = altInput.trim() || defaultAlt;
       const finalFilename = fileInputName.trim();
       replacement = '![' + finalAlt + '](' + finalFilename + ')';
+      updateLastImageFilename(finalFilename);
       break;
     }
     case 'link':
@@ -350,93 +350,107 @@ function applyFormatting(format) {
 document.addEventListener('DOMContentLoaded', function() {
   const textarea = document.getElementById('content');
   const formatBtns = document.querySelectorAll('.format-btn');
-  const imageInput = document.getElementById('image');
-  const imagePreviewFrame = document.getElementById('image-preview-frame');
-  const imagePreview = document.getElementById('image-preview');
-  const imagePreviewFilenameDisplay = document.getElementById('image-preview-filename');
-  const headerPreviewWrapper = document.getElementById('header-image-preview-wrapper');
-  const headerPreviewImg = document.getElementById('header-image-preview-img');
-  const headerPreviewFilenameDisplay = document.getElementById('header-image-preview-filename');
+  const imageInput = document.getElementById('images');
+  const pendingPreviewWrapper = document.getElementById('pending-image-preview');
+  const pendingPreviewGrid = document.getElementById('pending-image-grid');
+  const existingInlineImageEls = document.querySelectorAll('.existing-inline-image');
 
   const extractFileName = (path) => {
     if (!path) {
       return '';
     }
-    const normalized = path.split('?')[0];
+    const normalized = String(path).split('?')[0];
     const parts = normalized.split('/').filter(Boolean);
     return parts.length ? parts[parts.length - 1] : normalized;
   };
 
-  const setInlinePreview = (src, filename) => {
-    if (!imagePreviewFrame || !imagePreview) {
+  const clearChildren = (node) => {
+    if (!node) {
       return;
     }
-    if (src) {
-      imagePreview.src = src;
-      imagePreview.alt = filename || '選択した画像プレビュー';
-      imagePreviewFrame.classList.remove('hidden');
-      if (imagePreviewFilenameDisplay) {
-        imagePreviewFilenameDisplay.textContent = filename || extractFileName(src);
-      }
-    } else {
-      imagePreview.removeAttribute('src');
-      imagePreviewFrame.classList.add('hidden');
-      if (imagePreviewFilenameDisplay) {
-        imagePreviewFilenameDisplay.textContent = '';
-      }
+    while (node.firstChild) {
+      node.removeChild(node.firstChild);
     }
   };
 
-  const setHeaderPreview = (src, filename) => {
-    if (!headerPreviewWrapper || !headerPreviewImg) {
+  const renderPendingImages = (fileList) => {
+    if (!pendingPreviewWrapper || !pendingPreviewGrid) {
       return;
     }
-    if (src) {
-      headerPreviewImg.src = src;
-      headerPreviewImg.alt = filename || 'ヘッダー画像プレビュー';
-      headerPreviewWrapper.classList.remove('hidden');
-      if (headerPreviewFilenameDisplay) {
-        headerPreviewFilenameDisplay.textContent = filename || extractFileName(src);
-      }
-    } else {
-      headerPreviewImg.removeAttribute('src');
-      headerPreviewWrapper.classList.add('hidden');
-      if (headerPreviewFilenameDisplay) {
-        headerPreviewFilenameDisplay.textContent = '';
-      }
+    clearChildren(pendingPreviewGrid);
+    if (!fileList || !fileList.length) {
+      pendingPreviewWrapper.classList.add('hidden');
+      return;
     }
-  };
 
-  const initialInlineUrl = imagePreviewFrame?.dataset.initialUrl;
-  const initialInlineName = imagePreviewFrame?.dataset.initialName;
-  const initialHeaderUrl = headerPreviewWrapper?.dataset.initialUrl;
-  const initialHeaderName = headerPreviewWrapper?.dataset.initialName;
-
-  if (initialInlineUrl) {
-    setInlinePreview(initialInlineUrl, initialInlineName || extractFileName(initialInlineUrl));
-    setHeaderPreview(initialInlineUrl, initialInlineName || extractFileName(initialInlineUrl));
-  } else if (initialHeaderUrl) {
-    setInlinePreview(initialHeaderUrl, initialHeaderName || extractFileName(initialHeaderUrl));
-    setHeaderPreview(initialHeaderUrl, initialHeaderName || extractFileName(initialHeaderUrl));
-  }
-
-  if (imageInput) {
-    imageInput.addEventListener('change', function() {
-      const file = imageInput.files && imageInput.files[0];
+    pendingPreviewWrapper.classList.remove('hidden');
+    Array.from(fileList).forEach((file) => {
       if (!file) {
-        setInlinePreview('', '');
-        setHeaderPreview('', '');
         return;
       }
+      updateLastImageFilename(file.name || '');
       const reader = new FileReader();
       reader.onload = function(e) {
         const fileSrc = e.target?.result;
         const fileName = file.name || extractFileName(fileSrc);
-        setInlinePreview(fileSrc, fileName);
-        setHeaderPreview(fileSrc, fileName);
+        updateLastImageFilename(file.name || fileName);
+
+        const card = document.createElement('div');
+        card.className = 'pending-image-card border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden';
+
+        const img = document.createElement('img');
+        img.src = fileSrc;
+        img.alt = fileName || '選択した画像プレビュー';
+        img.className = 'w-full h-48 object-contain bg-gray-100';
+
+        const meta = document.createElement('div');
+        meta.className = 'px-3 py-2 text-xs text-gray-600 space-y-1';
+
+        const filenameRow = document.createElement('div');
+        const filenameLabel = document.createElement('span');
+        filenameLabel.textContent = 'ファイル名: ';
+        const filenameCode = document.createElement('code');
+        filenameCode.className = 'bg-gray-100 px-1 py-0.5 rounded';
+        filenameCode.textContent = fileName || '';
+        filenameRow.appendChild(filenameLabel);
+        filenameRow.appendChild(filenameCode);
+
+        const markdownRow = document.createElement('div');
+        const markdownLabel = document.createElement('span');
+        markdownLabel.textContent = 'Markdown: ';
+        const markdownCode = document.createElement('code');
+        markdownCode.className = 'bg-gray-100 px-1 py-0.5 rounded break-all';
+        const snippetName = fileName || '画像';
+        markdownCode.textContent = `![${snippetName}](${fileName || ''})`;
+        markdownRow.appendChild(markdownLabel);
+        markdownRow.appendChild(markdownCode);
+
+        meta.appendChild(filenameRow);
+        meta.appendChild(markdownRow);
+
+        card.appendChild(img);
+        card.appendChild(meta);
+
+        pendingPreviewGrid.appendChild(card);
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  existingInlineImageEls.forEach((el) => {
+    const filename = el.getAttribute('data-filename');
+    if (filename) {
+      updateLastImageFilename(filename);
+    }
+  });
+
+  if (imageInput) {
+    imageInput.addEventListener('change', () => {
+      renderPendingImages(imageInput.files);
+    });
+    if (imageInput.files && imageInput.files.length) {
+      renderPendingImages(imageInput.files);
+    }
   }
 
   // 入力時のプレビュー更新（debounce）

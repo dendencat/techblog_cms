@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 
-from techblog_cms.models import Article, Category
+from techblog_cms.models import Article, Category, ArticleInlineImage
 from techblog_cms.templatetags.markdown_filter import markdown_to_html
 
 
@@ -56,7 +56,7 @@ class ArticleEditingTests(TestCase):
         )
         self.user = User.objects.create_user(username="editor", password="pass1234")
 
-    def _make_image_file(self, format="PNG", size=(32, 32), color=(255, 0, 0)):
+    def _make_image_file(self, format="PNG", size=(32, 32), color=(255, 0, 0), name=None):
         buffer = io.BytesIO()
         with Image.new('RGB', size, color) as image:
             image.save(buffer, format=format)
@@ -69,7 +69,8 @@ class ArticleEditingTests(TestCase):
             'WEBP': 'image/webp',
         }
         content_type = content_type_map.get(format.upper(), 'application/octet-stream')
-        return SimpleUploadedFile(f"test.{format.lower()}", buffer.getvalue(), content_type=content_type)
+        filename = name or f"test.{format.lower()}"
+        return SimpleUploadedFile(filename, buffer.getvalue(), content_type=content_type)
 
     def test_edit_updates_content_and_preserves_slug(self):
         self.client.login(username="editor", password="pass1234")
@@ -94,28 +95,35 @@ class ArticleEditingTests(TestCase):
         self.assertContains(detail_response, "Updated body with new info")
         self.assertContains(detail_response, "Updated:")
 
-    def test_upload_small_png_sets_article_image(self):
+    def test_uploading_multiple_images_creates_inline_images(self):
         self.client.login(username="editor", password="pass1234")
         url = reverse("article_edit", args=[self.article.slug])
-        image_file = self._make_image_file(format="PNG", size=(16, 16))
+        image_one = self._make_image_file(format="PNG", size=(32, 32), name="diagram.png")
+        image_two = self._make_image_file(format="PNG", size=(24, 24), color=(0, 255, 0), name="diagram-2.png")
 
         response = self.client.post(
             url,
             {
                 "title": "Original Title",
-                "content": "Updated body with image",
+                "content": "Updated body with image\n\n![first](diagram.png)\n![second](diagram-2.png)",
                 "action": "save",
-                "image": image_file,
+                "images": [image_one, image_two],
             },
         )
 
         self.assertEqual(response.status_code, 302)
         refreshed = Article.objects.get(pk=self.article.pk)
-        self.assertTrue(refreshed.image.name.startswith("articles/"))
-        self.assertTrue(refreshed.image.name.endswith(".png"))
+        self.assertFalse(refreshed.image)
+
+        attachments = ArticleInlineImage.objects.filter(article=refreshed).order_by('uploaded_at')
+        self.assertEqual(attachments.count(), 2)
+        filenames = {attachment.filename for attachment in attachments}
+        self.assertIn("diagram.png", filenames)
+        self.assertIn("diagram-2.png", filenames)
 
         detail_response = self.client.get(reverse("article_detail", args=[refreshed.slug]))
-        self.assertContains(detail_response, refreshed.image.url)
+        for attachment in attachments:
+            self.assertContains(detail_response, attachment.image.url)
 
     def test_plain_text_upload_is_rejected(self):
         self.client.login(username="editor", password="pass1234")
@@ -128,7 +136,7 @@ class ArticleEditingTests(TestCase):
                 "title": "Original Title",
                 "content": "Attempt with fake image",
                 "action": "save",
-                "image": fake_image,
+                "images": [fake_image],
             },
         )
 
@@ -136,6 +144,7 @@ class ArticleEditingTests(TestCase):
         self.assertContains(response, "Uploaded file is not a valid image.")
         refreshed = Article.objects.get(pk=self.article.pk)
         self.assertFalse(refreshed.image)
+        self.assertFalse(ArticleInlineImage.objects.filter(article=refreshed).exists())
 
     def test_oversized_image_upload_is_rejected(self):
         self.client.login(username="editor", password="pass1234")
@@ -149,7 +158,7 @@ class ArticleEditingTests(TestCase):
                     "title": "Original Title",
                     "content": "Attempt with big image",
                     "action": "save",
-                    "image": big_image,
+                    "images": [big_image],
                 },
             )
 
@@ -157,6 +166,7 @@ class ArticleEditingTests(TestCase):
         self.assertContains(response, "Image exceeds the maximum allowed size")
         refreshed = Article.objects.get(pk=self.article.pk)
         self.assertFalse(refreshed.image)
+        self.assertFalse(ArticleInlineImage.objects.filter(article=refreshed).exists())
 
 
 class MarkdownRenderingTests(TestCase):

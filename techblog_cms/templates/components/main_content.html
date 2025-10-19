@@ -2,10 +2,6 @@
     <div class="articles-grid">
         {% for article in articles %}
         <article class="article-card">
-            {% if article.image %}
-            <img src="{{ article.image.url }}" alt="{{ article.title }}" 
-                 class="w-full h-48 object-cover rounded-t-lg">
-            {% endif %}
             <div class="p-4">
                 <h2 class="text-xl font-semibold mb-2">
                     <a href="{% url 'article' slug=article.slug %}" 
