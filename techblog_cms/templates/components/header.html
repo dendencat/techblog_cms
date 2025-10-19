@@ -18,10 +18,17 @@
                     <a href="{% url 'home' %}" class="text-gray-600 hover:text-gray-900">Home</a>
                     <a href="{% url 'article_list' %}" class="text-gray-600 hover:text-gray-900">Articles</a>
                     <a href="{% url 'categories' %}" class="text-gray-600 hover:text-gray-900">Categories</a>
+                    {% if request.user.is_authenticated %}
+                    <a href="{% url 'article_new' %}" class="px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-600 transition">
+                        Submit Article
+                    </a>
+                    <a href="{% url 'logout' %}" class="text-gray-600 hover:text-gray-900">ログアウト</a>
+                    {% else %}
                     <a href="{% url 'login' %}" class="px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-600 transition">
                         ログイン
                     </a>
                     <a href="#" class="text-blue-500 hover:underline">ユーザー登録</a>
+                    {% endif %}
                 </div>
 
                 <!-- Mobile menu button -->
@@ -45,10 +52,17 @@
         <!-- Mobile navigation menu -->
         <div id="mobile-menu" class="hidden md:hidden pb-4 border-t border-gray-200">
             <div class="pt-4 flex flex-col space-y-3">
-                <a href="{% url 'login' %}" class="text-gray-700 hover:text-blue-600 font-medium">ログイン</a>
+                <a href="{% url 'home' %}" class="text-gray-700 hover:text-blue-600 font-medium">ホーム</a>
                 <a href="{% url 'article_list' %}" class="text-gray-700 hover:text-blue-600 font-medium">記事一覧</a>
                 <a href="{% url 'categories' %}" class="text-gray-700 hover:text-blue-600 font-medium">カテゴリ一覧</a>
                 <a href="{% url 'tags' %}" class="text-gray-700 hover:text-blue-600 font-medium">タグ一覧</a>
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'article_new' %}" class="text-gray-700 hover:text-blue-600 font-medium">記事を投稿</a>
+                    <a href="{% url 'logout' %}" class="text-gray-700 hover:text-blue-600 font-medium">ログアウト</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="text-gray-700 hover:text-blue-600 font-medium">ログイン</a>
+                    <a href="#" class="text-blue-500 hover:underline font-medium">ユーザー登録</a>
+                {% endif %}
             </div>
         </div>
     </nav>
