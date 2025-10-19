@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
-{% block header %}{% endblock %}
+{% block header %}
+  {% include 'components/header.html' %}
+{% endblock %}
 {% block sidebar %}{% endblock %}
 {% block content %}
 <!-- CSRFトークンを非表示で配置 -->
