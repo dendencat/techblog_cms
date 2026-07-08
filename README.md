@@ -20,6 +20,24 @@
 - **コンテナ化**: Docker & Docker Compose
 - **CI/CD**: GitHub Actions
 
+
+## 📁 リポジトリ構成
+
+```text
+techblog_cms/                 # 正系統の Django アプリケーション
+├── templates/                # Django テンプレート
+├── static/                   # CSS / JavaScript / 画像などの静的資産
+├── tests/                    # pytest ベースのテスト
+├── settings.py               # 環境変数を使う基本設定
+└── urls.py / views.py        # URL ルーティングとビュー
+docker/                       # Django コンテナのエントリポイントなど
+nginx/                        # Nginx 設定
+scripts/                      # 証明書更新や運用補助スクリプト
+.github/workflows/            # CI/CD ワークフロー
+```
+
+静的資産は `techblog_cms/static/` に集約しています。テンプレート配下には CSS/JavaScript を配置しない方針です。
+
 ## 🚀 クイックスタート
 
 ### 前提条件

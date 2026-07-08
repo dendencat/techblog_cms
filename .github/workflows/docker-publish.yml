@@ -52,6 +52,16 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-django pytest-cov
           
+      - name: Check migrations
+        env:
+          DJANGO_SETTINGS_MODULE: techblog_cms.settings
+          SECRET_KEY: test-key
+          DEBUG: 'False'
+          TESTING: 'True'
+          ALLOWED_HOSTS: localhost,127.0.0.1,testserver,blog.iohub.link
+        run: |
+          python manage.py makemigrations --check --dry-run
+
       - name: Run tests
         env:
           DJANGO_SETTINGS_MODULE: techblog_cms.settings

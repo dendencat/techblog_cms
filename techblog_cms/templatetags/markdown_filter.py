@@ -18,6 +18,7 @@ except ModuleNotFoundError:
 
 IMG_TAG_SRC_PATTERN = re.compile(r'(<img[^>]+src=")([^"]+)(")')
 RELATIVE_URI_PATTERN = re.compile(r'^(?:https?:|data:|/)', re.IGNORECASE)
+PLAIN_URL_PATTERN = re.compile(r'(?<![\"=])(https?://[^\s<]+)')
 
 
 def _resolve_image_source(src: str) -> str:
@@ -46,6 +47,19 @@ def _rewrite_image_sources(html: str) -> str:
 
     return IMG_TAG_SRC_PATTERN.sub(_replace, html)
 
+
+def _linkify_plain_urls(html: str) -> str:
+    if LINKIFY_EXTENSION or not html:
+        return html
+
+    def _replace(match: re.Match) -> str:
+        url = match.group(1).rstrip('.,)')
+        trailing = match.group(1)[len(url):]
+        return f'<a href="{url}">{url}</a>{trailing}'
+
+    return PLAIN_URL_PATTERN.sub(_replace, html)
+
+
 @register.filter
 def markdown_to_html(text):
     """
@@ -73,4 +87,5 @@ def markdown_to_html(text):
         }
     })
 
+    html = _linkify_plain_urls(html)
     return mark_safe(_rewrite_image_sources(html))

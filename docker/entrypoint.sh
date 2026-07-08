@@ -33,13 +33,13 @@ done
 echo "Database is available!"
 
 # -------------------------------------------
-# データベースマイグレーションの実行
+# データベースマイグレーションの適用
 # -------------------------------------------
-echo "Creating migrations..."
-python manage.py makemigrations
+echo "Checking for pending model migrations..."
+python manage.py makemigrations --check --dry-run
 
 echo "Applying migrations..."
-python manage.py migrate
+python manage.py migrate --noinput
 
 # -------------------------------------------
 # 開発環境の場合はマイグレーションファイルの作成とテストデータの作成
