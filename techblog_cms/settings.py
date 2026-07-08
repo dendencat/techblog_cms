@@ -1,11 +1,16 @@
+import logging
 import os
 import sys
 from pathlib import Path
 from decouple import config, Csv
 from urllib.parse import urlparse, unquote
 
+logger = logging.getLogger(__name__)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key')
@@ -64,21 +69,25 @@ WSGI_APPLICATION = 'techblog_cms.wsgi.application'
 IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.environ or any(
     x.endswith('pytest') for x in sys.modules.keys()
 )
-print(f"IS_TESTING: {IS_TESTING}")
+logger.debug("IS_TESTING: %s", IS_TESTING)
 
 if IS_TESTING:
-    # Testing uses SQLite for simplicity
+    # Testing uses SQLite and in-memory cache for simplicity and isolation.
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': ':memory:',
         }
     }
-    # Disable CSRF for testing
-    MIDDLEWARE = [m for m in MIDDLEWARE if m != 'django.middleware.csrf.CsrfViewMiddleware']
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'techblog-test-cache',
+        }
+    }
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
     DEBUG = True
     APPEND_SLASH = False
-    print(f"MIDDLEWARE after removal: {MIDDLEWARE}")
 else:
     # Prefer DATABASE_URL when provided (12factor style)
     db_url = os.environ.get('DATABASE_URL')
@@ -146,14 +155,19 @@ CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
 LOGIN_URL = '/login/'
 
 # CSRF trusted origins
-CSRF_TRUSTED_ORIGINS = [
+DEFAULT_CSRF_TRUSTED_ORIGINS = (
     'https://blog.iohub.link',
     'http://blog.iohub.link',
     'https://localhost',
     'http://localhost',
     'https://127.0.0.1',
     'http://127.0.0.1',
-]
+)
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default=','.join(DEFAULT_CSRF_TRUSTED_ORIGINS),
+    cast=Csv(),
+)
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -195,21 +209,19 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# CSRF Settings
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
-
 # Cache Configuration
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': config('REDIS_URL', default='redis://redis:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'KEY_PREFIX': 'techblog',
-        'TIMEOUT': 300,
+if not IS_TESTING:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': config('REDIS_URL', default='redis://redis:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'techblog',
+            'TIMEOUT': 300,
+        }
     }
-}
 
 # Session Configuration
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
@@ -245,7 +257,7 @@ LOGGING = {
         'file': {
             'level': 'ERROR',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
+            'filename': str(LOG_DIR / 'django.log'),
             'maxBytes': 1024 * 1024 * 15,  # 15MB
             'backupCount': 10,
             'formatter': 'verbose',

@@ -25,8 +25,9 @@ CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'")
 CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com")
 CSP_IMG_SRC = ("'self'", "data:", "https:")
 
-# Additional middleware for production
-MIDDLEWARE.insert(0, 'django.middleware.security.SecurityMiddleware')
+# SecurityMiddleware is already configured in base settings.
+if 'django.middleware.security.SecurityMiddleware' not in MIDDLEWARE:
+    MIDDLEWARE.insert(0, 'django.middleware.security.SecurityMiddleware')
 
 # Force cookies to be httponly
 SESSION_COOKIE_HTTPONLY = True
