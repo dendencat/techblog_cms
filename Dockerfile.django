@@ -42,8 +42,9 @@ COPY . .
 
 # Create a non-root user to run the application.
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
-RUN chown -R appuser:appgroup /app
-RUN mkdir -p /app/logs && chown -R appuser:appgroup /app/logs
+# static/media/logs must exist owned by appuser so fresh named volumes
+# mounted there inherit that ownership on first use.
+RUN mkdir -p /app/static /app/media /app/logs && chown -R appuser:appgroup /app
 
 # Entrypoint to run migrations and collectstatic
 RUN chmod +x /app/docker/entrypoint.sh

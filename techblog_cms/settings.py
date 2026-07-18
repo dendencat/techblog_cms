@@ -55,7 +55,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'techblog_cms.context_processors.testing_mode',
                 'techblog_cms.context_processors.sidebar',
             ],
         },
@@ -66,19 +65,32 @@ WSGI_APPLICATION = 'techblog_cms.wsgi.application'
 
 # Database
 # Detect testing mode either via explicit env var or when running under pytest
-IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.environ or any(
+IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.environ or 'test' in sys.argv or any(
     x.endswith('pytest') for x in sys.modules.keys()
 )
 logger.debug("IS_TESTING: %s", IS_TESTING)
 
 if IS_TESTING:
-    # Testing uses SQLite and in-memory cache for simplicity and isolation.
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
+    # Tests default to SQLite for speed; set TEST_DB_ENGINE=postgres (as CI
+    # does) to run them against the same engine as production.
+    if os.environ.get('TEST_DB_ENGINE') == 'postgres':
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.environ.get('POSTGRES_DB', 'techblogdb'),
+                'USER': os.environ.get('POSTGRES_USER', 'techblog'),
+                'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'techblogpass'),
+                'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+                'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            }
         }
-    }
+    else:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': ':memory:',
+            }
+        }
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -86,6 +98,9 @@ if IS_TESTING:
         }
     }
     SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+    PASSWORD_HASHERS = [
+        'django.contrib.auth.hashers.MD5PasswordHasher',
+    ]
     DEBUG = True
     APPEND_SLASH = False
 else:
@@ -321,13 +336,3 @@ if not DEBUG:
     EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
     DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@techblog.com')
     ADMINS = [('Admin', config('ADMIN_EMAIL', default='admin@techblog.com'))]
-
-# Testing configuration
-if 'test' in sys.argv:
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
-    }
-    PASSWORD_HASHERS = [
-        'django.contrib.auth.hashers.MD5PasswordHasher',
-    ]
