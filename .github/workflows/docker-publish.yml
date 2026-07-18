@@ -74,6 +74,60 @@ jobs:
         run: |
           python -m pytest -v --cov=techblog_cms --cov-report=xml
 
+  # Boot the real compose stack (db + redis + django) and hit it end-to-end,
+  # so entrypoint, migrations, cache auth, and the container healthcheck are
+  # proven to work together on every PR. nginx is excluded: its config
+  # requires TLS certificates that only exist on the production host.
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Generate a self-consistent .env
+        run: |
+          cat > .env <<'ENV'
+          SECRET_KEY=ci-smoke-secret-key
+          DEBUG=False
+          ALLOWED_HOSTS=localhost,127.0.0.1,django
+          POSTGRES_DB=techblogdb
+          POSTGRES_USER=techblog
+          POSTGRES_PASSWORD=techblogpass
+          DATABASE_URL=postgres://techblog:techblogpass@db:5432/techblogdb
+          REDIS_PASSWORD=ci-smoke-redis-pass
+          REDIS_URL=redis://redis:6379/1
+          ENV
+
+      - name: Start db, redis, and django
+        run: docker compose up -d --build db redis django
+
+      - name: Wait for the django healthcheck
+        run: |
+          cid=$(docker compose ps -q django)
+          for i in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo starting)
+            [ "$status" = healthy ] && exit 0
+            sleep 5
+          done
+          echo "django never became healthy (last status: $status)"
+          docker compose logs django
+          exit 1
+
+      - name: Probe the running application
+        run: |
+          docker compose exec -T django python - <<'PY'
+          import requests
+          secure = {'X-Forwarded-Proto': 'https'}
+          for path, headers in [('/health/', {}), ('/ready/', {}), ('/', secure), ('/articles/', secure)]:
+              r = requests.get('http://localhost:8000' + path, headers=headers,
+                               allow_redirects=False, timeout=15)
+              print(path, r.status_code)
+              assert r.status_code == 200, f'{path} returned {r.status_code}'
+          PY
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs django db redis
+
   build:
     needs: test
     runs-on: ubuntu-latest
