@@ -1,132 +1,116 @@
+import io
+
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
-from PIL import Image, UnidentifiedImageError
+from django.core.cache import cache
+from django.core.files.base import ContentFile
+from django.db.models import Count
+from django.utils.safestring import mark_safe
+from PIL import Image, ImageOps, UnidentifiedImageError
 from .models import Article, Category, Tag, ArticleInlineImage
 from techblog_cms.templatetags.markdown_filter import markdown_to_html
 from django.conf import settings
 from django.http import HttpResponseNotFound
 
-def health_check(request):
-    return JsonResponse({"status": "ok"})
-
-def index(request):
-    return render(request, 'index.html')
-
 def home_view(request):
-    articles = Article.objects.filter(published=True).order_by('-created_at')[:10]
-    categories = Category.objects.all()
-    tags = Tag.objects.all()
+    articles = Article.objects.filter(published=True).select_related('category').order_by('-created_at')[:10]
     return render(
         request,
         'home.html',
         {
             'articles': articles,
-            'categories': categories,
-            'tags': tags,
         },
     )
 
 def article_list_view(request):
-    articles = Article.objects.filter(published=True).order_by('-created_at')
-    categories = Category.objects.all()
-    tags = Tag.objects.all()
+    articles = Article.objects.filter(published=True).select_related('category').order_by('-created_at')
+    paginator = Paginator(articles, 10)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
     return render(
         request,
         'article_list.html',
         {
-            'articles': articles,
-            'categories': categories,
-            'tags': tags,
+            'articles': page_obj,
+            'page_obj': page_obj,
         },
     )
 
 def categories_view(request):
-    categories = Category.objects.all()
-    tags = Tag.objects.all()
+    categories = Category.objects.annotate(num_articles=Count('article'))
     return render(
         request,
         'category_list.html',
         {
             'categories': categories,
-            'tags': tags,
         },
     )
 
 def category_view(request, slug):
     category = get_object_or_404(Category, slug=slug)
-    articles = category.article_set.filter(published=True).order_by('-created_at')
-    categories = Category.objects.all()
-    tags = Tag.objects.all()
+    articles = category.article_set.filter(published=True).select_related('category').order_by('-created_at')
+    paginator = Paginator(articles, 10)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
     return render(
         request,
         'category_detail.html',
         {
             'category': category,
-            'articles': articles,
-            'categories': categories,
-            'tags': tags,
+            'articles': page_obj,
+            'page_obj': page_obj,
         },
     )
 
 def tags_view(request):
-    tags = Tag.objects.all()
-    categories = Category.objects.all()
-    return render(
-        request,
-        'tag_list.html',
-        {
-            'tags': tags,
-            'categories': categories,
-        },
-    )
+    return render(request, 'tag_list.html')
 
 def tag_view(request, slug):
     tag = get_object_or_404(Tag, slug=slug)
     if request.user.is_authenticated:
-        articles = tag.article_set.order_by('-created_at')
+        articles = tag.article_set.select_related('category').order_by('-created_at')
     else:
-        articles = tag.article_set.filter(published=True).order_by('-created_at')
+        articles = tag.article_set.filter(published=True).select_related('category').order_by('-created_at')
 
-    categories = Category.objects.all()
-    tags = Tag.objects.all()
+    paginator = Paginator(articles, 10)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
     return render(
         request,
         'tag_detail.html',
         {
             'tag': tag,
-            'articles': articles,
-            'categories': categories,
-            'tags': tags,
+            'articles': page_obj,
+            'page_obj': page_obj,
         },
     )
 
 def article_detail_view(request, slug):
+    articles = Article.objects.select_related('category').prefetch_related('tags')
     # ログインしている場合は下書き記事も表示可能
     if request.user.is_authenticated:
-        article = get_object_or_404(Article, slug=slug)
+        article = get_object_or_404(articles, slug=slug)
     else:
-        article = get_object_or_404(Article, slug=slug, published=True)
-    categories = Category.objects.all()
-    tags = Tag.objects.all()
+        article = get_object_or_404(articles, slug=slug, published=True)
+    cache_key = f'article_html:{article.pk}:{article.updated_at.isoformat()}'
+    content_html = cache.get(cache_key)
+    if content_html is None:
+        content_html = str(markdown_to_html(article.content))
+        cache.set(cache_key, content_html, timeout=60 * 60 * 24)
     return render(
         request,
         'article_detail.html',
         {
             'article': article,
-            'categories': categories,
-            'tags': tags,
+            'content_html': mark_safe(content_html),
         },
     )
 def admin_guard(request):
-    """Direct /admin/ access guard. Show 404 if HIDE_ADMIN_URL is True."""
-    if getattr(settings, 'HIDE_ADMIN_URL', False):
-        return HttpResponseNotFound('<h1>Not Found</h1>')
-    return redirect('/admin/')
+    """Return 404 for all direct /admin/ access."""
+    return HttpResponseNotFound('<h1>Not Found</h1>')
 
 # Create your views here.
 
@@ -206,6 +190,35 @@ def validate_article_image(uploaded_file):
         pass
 
     return uploaded_file, None
+
+
+def process_article_image(uploaded_file):
+    """Normalize a validated article image while preserving its filename."""
+    if not uploaded_file:
+        return None
+
+    original_name = uploaded_file.name
+    uploaded_file.seek(0)
+
+    with Image.open(uploaded_file) as image:
+        image_format = (image.format or '').upper()
+        if image_format == 'GIF':
+            uploaded_file.seek(0)
+            return uploaded_file
+
+        processed_image = ImageOps.exif_transpose(image)
+        max_dimension = settings.ARTICLE_IMAGE_MAX_DIMENSION
+        if max_dimension and max(processed_image.size) > max_dimension:
+            processed_image.thumbnail(
+                (max_dimension, max_dimension),
+                Image.Resampling.LANCZOS,
+            )
+
+        output = io.BytesIO()
+        save_options = {'quality': 85} if image_format == 'JPEG' else {}
+        processed_image.save(output, format=image_format, **save_options)
+
+    return ContentFile(output.getvalue(), name=original_name)
 
 
 @require_http_methods(["GET", "POST"])
@@ -321,7 +334,7 @@ def article_editor_view(request, slug=None):
                 display_name = getattr(uploaded_image, 'name', '選択した画像')
                 return render_editor(title, content, image_error=f"{display_name}: {image_error}")
             if cleaned_image:
-                cleaned_images.append(cleaned_image)
+                cleaned_images.append(process_article_image(cleaned_image))
 
         if not title or not content:
             return render_editor(title, content, error="タイトルと本文は必須です。")

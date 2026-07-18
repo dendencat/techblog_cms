@@ -129,23 +129,6 @@ services:
     # Security: Requires a password for authentication.
     # Consider network restrictions for enhanced security.
 
-  # Static Files Server
-  static:
-    image: nginx:alpine
-    volumes:
-      - static_volume:/usr/share/nginx/html
-    ports:
-      - "8080:80"
-    networks:
-      - techblog_network
-    restart: unless-stopped
-    user: root
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 128M
-
   certbot:
     image: certbot/certbot:latest
     volumes:

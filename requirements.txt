@@ -1,7 +1,7 @@
 # Core dependencies
-Django==4.2.10
+Django==4.2.30
 python-decouple>=3.8,<4.0
-Pillow>=10.0,<11.0
+Pillow>=12.1.1,<13.0
 Pygments>=2.15,<3.0
 
 # Database
@@ -12,22 +12,10 @@ redis>=5.0,<6.0
 django-redis>=5.4,<6.0
 
 # Web server
-gunicorn>=21.2,<22.0
+gunicorn>=23.0,<24.0
 
 # HTTP client (for healthcheck)
 requests>=2.31,<3.0
-
-# Production optimizations
-whitenoise>=6.5,<7.0  # Static file serving
-django-compressor>=4.4,<5.0  # CSS/JS compression
-
-# Security
-django-cors-headers>=4.3,<5.0
-django-csp>=3.7,<4.0  # Content Security Policy
-
-# Monitoring and debugging (production)
-sentry-sdk>=1.39,<2.0
-django-extensions>=3.2,<4.0
 
 # Testing
 pytest>=7.4,<8.0
@@ -36,9 +24,6 @@ pytest-cov>=4.1,<5.0
 playwright>=1.40,<2.0
 
 # Code quality
-black>=23.12,<24.0
-flake8>=6.1,<7.0
-isort>=5.13,<6.0
 
 # Documentation
 markdown>=3.5,<4.0
