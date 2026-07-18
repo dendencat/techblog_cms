@@ -90,6 +90,14 @@ class Article(models.Model):
     def get_absolute_url(self):
         return reverse('article_detail', kwargs={'slug': self.slug})
 
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=['published', '-created_at'],
+                name='article_pub_created_idx',
+            ),
+        ]
+
 
 class ArticleInlineImage(models.Model):
     article = models.ForeignKey(Article, related_name='inline_images', on_delete=models.CASCADE)

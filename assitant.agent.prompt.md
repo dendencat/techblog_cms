@@ -50,7 +50,7 @@ model: Grok Code Fast 1 (Preview)
 
 2. **Docker設定**:
    - **Djangoコンテナ (Dockerfile.django)**: Python 3.11ベースで依存関係をインストールし、非rootユーザーで実行。
-   - **Nginxコンテナ (Dockerfile.nginx, Dockerfile.nginx.static)**: 静的ファイル配信とリバースプロキシ。SSL証明書をマウント。
+   - **Nginxコンテナ (Dockerfile.nginx)**: 静的ファイル配信とリバースプロキシ。SSL証明書をマウント。
    - **Compose (docker-compose.yml)**: サービス間ネットワーク、ボリューム、環境変数を定義。Certbotで証明書更新を自動化。
 
 3. **データベースとキャッシュ**:

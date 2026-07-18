@@ -39,7 +39,7 @@ echo "Checking for pending model migrations..."
 python manage.py makemigrations --check --dry-run
 
 echo "Applying migrations..."
-python manage.py migrate --noinput
+python manage.py migrate --noinput --fake-initial
 
 # -------------------------------------------
 # 開発環境の場合はマイグレーションファイルの作成とテストデータの作成

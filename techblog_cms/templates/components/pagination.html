@@ -1,0 +1,21 @@
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="mt-8 flex items-center justify-center gap-4" aria-label="Pagination">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}"
+       class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">前へ</a>
+    {% else %}
+    <span class="rounded bg-gray-200 px-4 py-2 text-gray-500">前へ</span>
+    {% endif %}
+
+    <span class="text-sm text-gray-700">
+        {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+    </span>
+
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}"
+       class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">次へ</a>
+    {% else %}
+    <span class="rounded bg-gray-200 px-4 py-2 text-gray-500">次へ</span>
+    {% endif %}
+</nav>
+{% endif %}

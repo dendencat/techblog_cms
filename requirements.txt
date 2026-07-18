@@ -17,18 +17,6 @@ gunicorn>=21.2,<22.0
 # HTTP client (for healthcheck)
 requests>=2.31,<3.0
 
-# Production optimizations
-whitenoise>=6.5,<7.0  # Static file serving
-django-compressor>=4.4,<5.0  # CSS/JS compression
-
-# Security
-django-cors-headers>=4.3,<5.0
-django-csp>=3.7,<4.0  # Content Security Policy
-
-# Monitoring and debugging (production)
-sentry-sdk>=1.39,<2.0
-django-extensions>=3.2,<4.0
-
 # Testing
 pytest>=7.4,<8.0
 pytest-django>=4.7,<5.0

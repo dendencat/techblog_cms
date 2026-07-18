@@ -24,13 +24,12 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,django,blog
 
 # Application definition
 INSTALLED_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'techblog_cms',  # Add the techblog_cms application
+    'techblog_cms.apps.TechblogCmsConfig',
 ]
 
 MIDDLEWARE = [
@@ -57,6 +56,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'techblog_cms.context_processors.testing_mode',
+                'techblog_cms.context_processors.sidebar',
             ],
         },
     },
@@ -128,6 +128,20 @@ else:
             }
         }
 
+DATABASES['default']['CONN_MAX_AGE'] = config('CONN_MAX_AGE', default=60, cast=int)
+
+if not DEBUG:
+    TEMPLATES[0]['APP_DIRS'] = False
+    TEMPLATES[0]['OPTIONS']['loaders'] = [
+        (
+            'django.template.loaders.cached.Loader',
+            [
+                'django.template.loaders.filesystem.Loader',
+                'django.template.loaders.app_directories.Loader',
+            ],
+        ),
+    ]
+
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
@@ -144,9 +158,7 @@ ARTICLE_IMAGE_ALLOWED_FORMATS = tuple(
     fmt.upper() for fmt in config('ARTICLE_IMAGE_ALLOWED_FORMATS', default='JPEG,PNG,GIF,WEBP', cast=Csv())
 )
 ARTICLE_IMAGE_MAX_PIXELS = config('ARTICLE_IMAGE_MAX_PIXELS', default=20_000_000, cast=int)
-
-# Admin hardening
-HIDE_ADMIN_URL = True
+ARTICLE_IMAGE_MAX_DIMENSION = config('ARTICLE_IMAGE_MAX_DIMENSION', default=1920, cast=int)
 
 # CSRF failure view for debugging
 CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
@@ -199,29 +211,37 @@ USE_TZ = True
 # Security Settings for Production
 if not DEBUG:
     SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+    SECURE_REDIRECT_EXEMPT = [r'^health/$', r'^ready/$']
     SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
     CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
-    SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = True
 
 # Cache Configuration
 if not IS_TESTING:
+    redis_url = config('REDIS_URL', default='redis://redis:6379/1')
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': config('REDIS_URL', default='redis://redis:6379/1'),
+            'LOCATION': redis_url,
             'OPTIONS': {
                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'IGNORE_EXCEPTIONS': True,
             },
             'KEY_PREFIX': 'techblog',
             'TIMEOUT': 300,
         }
     }
+    redis_password = config('REDIS_PASSWORD', default='')
+    parsed_redis_url = urlparse(redis_url)
+    if redis_password and parsed_redis_url.username is None and parsed_redis_url.password is None:
+        CACHES['default']['OPTIONS']['PASSWORD'] = redis_password
 
 # Session Configuration
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
@@ -290,10 +310,6 @@ LOGGING = {
         },
     },
 }
-
-# Media files configuration
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Email configuration (for production)
 if not DEBUG:

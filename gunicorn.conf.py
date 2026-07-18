@@ -1,4 +1,3 @@
-import multiprocessing
 import os
 
 # Get the directory containing this file
@@ -6,7 +5,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Basic configurations
 bind = "0.0.0.0:8000"
-workers = multiprocessing.cpu_count() * 2 + 1
+workers = int(os.environ.get('GUNICORN_WORKERS', '3'))
 worker_class = "sync"  # Changed from gevent to sync for stability
 timeout = 120
 keepalive = 5
@@ -19,9 +18,9 @@ wsgi_app = 'techblog_cms.wsgi:application'  # Updated WSGI path
 # Logging
 errorlog = os.path.join(current_dir, 'logs/error.log')
 accesslog = os.path.join(current_dir, 'logs/access.log')
-loglevel = 'debug'
+loglevel = os.environ.get('GUNICORN_LOG_LEVEL', 'info')
 
 # Development settings
-reload = True
+reload = os.environ.get('DJANGO_ENV') == 'development'
 capture_output = True
 enable_stdio_inheritance = True

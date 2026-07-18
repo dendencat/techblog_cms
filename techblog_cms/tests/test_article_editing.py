@@ -125,6 +125,70 @@ class ArticleEditingTests(TestCase):
         for attachment in attachments:
             self.assertContains(detail_response, attachment.image.url)
 
+    def test_inline_image_long_edge_is_resized(self):
+        self.client.login(username="editor", password="pass1234")
+        url = reverse("article_edit", args=[self.article.slug])
+        large_image = self._make_image_file(
+            format="PNG",
+            size=(1200, 2400),
+            name="portrait.png",
+        )
+
+        response = self.client.post(
+            url,
+            {
+                "title": "Original Title",
+                "content": "Updated body with an inline image",
+                "action": "save",
+                "images": [large_image],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        attachment = ArticleInlineImage.objects.get(article=self.article)
+        self.assertEqual(attachment.filename, "portrait.png")
+        with Image.open(attachment.image.path) as saved_image:
+            self.assertEqual(saved_image.size, (960, 1920))
+            self.assertEqual(saved_image.format, "PNG")
+
+    def test_gif_upload_is_saved_without_reencoding(self):
+        self.client.login(username="editor", password="pass1234")
+        url = reverse("article_edit", args=[self.article.slug])
+        buffer = io.BytesIO()
+        frames = [
+            Image.new("RGB", (32, 32), (255, 0, 0)),
+            Image.new("RGB", (32, 32), (0, 0, 255)),
+        ]
+        frames[0].save(
+            buffer,
+            format="GIF",
+            save_all=True,
+            append_images=frames[1:],
+            duration=100,
+            loop=0,
+        )
+        original_bytes = buffer.getvalue()
+        animated_gif = SimpleUploadedFile(
+            "animation.gif",
+            original_bytes,
+            content_type="image/gif",
+        )
+
+        response = self.client.post(
+            url,
+            {
+                "title": "Original Title",
+                "content": "Updated body with an animation",
+                "action": "save",
+                "images": [animated_gif],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        attachment = ArticleInlineImage.objects.get(article=self.article)
+        with attachment.image.open("rb") as saved_gif:
+            self.assertEqual(saved_gif.read(), original_bytes)
+
     def test_plain_text_upload_is_rejected(self):
         self.client.login(username="editor", password="pass1234")
         url = reverse("article_edit", args=[self.article.slug])

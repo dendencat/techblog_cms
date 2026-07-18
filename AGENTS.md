@@ -21,26 +21,23 @@ techblog_cms is a Django-based technical blog content management system. It oper
 ## Project Structure
 ```
 techblog_cms/
-├── app/                          # Django application
-│   ├── techblog_cms/            # Main Django app
-│   │   ├── __init__.py
-│   │   ├── settings.py          # Django settings (using environment variables)
-│   │   ├── urls.py              # URL mapping
-│   │   ├── views.py             # View functions
-│   │   ├── wsgi.py              # WSGI entry point
-│   │   └── templates/           # HTML templates
-│   └── requirements.txt         # Python dependencies
+├── techblog_cms/                 # Django application
+│   ├── settings.py              # Django settings (using environment variables)
+│   ├── urls.py                  # URL mapping
+│   ├── views.py                 # View functions
+│   ├── wsgi.py                  # WSGI entry point
+│   ├── templates/               # HTML templates
+│   └── tests/                   # Test files
 ├── nginx/                        # Nginx configuration
-│   ├── conf.d/
-│   │   └── default.conf         # Nginx configuration file
-│   └── Dockerfile               # Nginx container definition
+│   └── conf.d/
+│       └── default.conf         # Nginx configuration file
 ├── scripts/                      # Utility scripts
 │   ├── init-letsencrypt.sh      # Initialize SSL certificate
 │   └── renew-cert.sh            # Renew SSL certificate
 ├── static/                       # Static files
-├── tests/                        # Test files
 ├── docker-compose.yml            # Container orchestration
-├── Dockerfile.*                  # Various Dockerfiles
+├── Dockerfile.django             # Django container definition
+├── Dockerfile.nginx              # Nginx container definition
 ├── requirements.txt              # Project-wide dependencies
 └── pytest.ini                    # pytest configuration
 ```

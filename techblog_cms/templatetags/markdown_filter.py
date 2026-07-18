@@ -81,7 +81,7 @@ def markdown_to_html(text):
     html = markdown.markdown(text, extensions=extensions, extension_configs={
         'codehilite': {
             'linenums': False,
-            'guess_lang': True,
+            'guess_lang': False,
             'css_class': 'highlight',
             'pygments_style': 'github-dark',
         }
