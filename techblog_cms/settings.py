@@ -65,7 +65,7 @@ WSGI_APPLICATION = 'techblog_cms.wsgi.application'
 
 # Database
 # Detect testing mode either via explicit env var or when running under pytest
-IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.environ or any(
+IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.environ or 'test' in sys.argv or any(
     x.endswith('pytest') for x in sys.modules.keys()
 )
 logger.debug("IS_TESTING: %s", IS_TESTING)
@@ -98,6 +98,9 @@ if IS_TESTING:
         }
     }
     SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+    PASSWORD_HASHERS = [
+        'django.contrib.auth.hashers.MD5PasswordHasher',
+    ]
     DEBUG = True
     APPEND_SLASH = False
 else:
@@ -333,13 +336,3 @@ if not DEBUG:
     EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
     DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@techblog.com')
     ADMINS = [('Admin', config('ADMIN_EMAIL', default='admin@techblog.com'))]
-
-# Testing configuration
-if 'test' in sys.argv:
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
-    }
-    PASSWORD_HASHERS = [
-        'django.contrib.auth.hashers.MD5PasswordHasher',
-    ]

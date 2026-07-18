@@ -129,7 +129,7 @@ jobs:
         run: docker compose logs django db redis
 
   build:
-    needs: test
+    needs: [test, smoke]
     runs-on: ubuntu-latest
 
     steps:
