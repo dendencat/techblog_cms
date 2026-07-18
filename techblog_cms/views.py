@@ -5,7 +5,6 @@ from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.core.cache import cache
 from django.core.files.base import ContentFile
@@ -222,7 +221,6 @@ def process_article_image(uploaded_file):
 
 
 @require_http_methods(["GET", "POST"])
-@csrf_exempt
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -372,14 +370,11 @@ def article_editor_view(request, slug=None):
 
 
 @login_required
-@require_http_methods(["POST"]) 
-@csrf_exempt
+@require_http_methods(["POST"])
 def preview_markdown_view(request):
     """Render markdown to HTML for live preview using the same pipeline as production.
 
-    Notes:
-    - CSRF exempt to simplify AJAX preview while authenticated.
-    - Returns JSON: { html: "<rendered>" }
+    Returns JSON: { html: "<rendered>" }
     """
     text = request.POST.get('text', '') or ''
     html = markdown_to_html(text)
