@@ -71,13 +71,26 @@ IS_TESTING = os.environ.get('TESTING') == 'True' or 'PYTEST_CURRENT_TEST' in os.
 logger.debug("IS_TESTING: %s", IS_TESTING)
 
 if IS_TESTING:
-    # Testing uses SQLite and in-memory cache for simplicity and isolation.
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
+    # Tests default to SQLite for speed; set TEST_DB_ENGINE=postgres (as CI
+    # does) to run them against the same engine as production.
+    if os.environ.get('TEST_DB_ENGINE') == 'postgres':
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.environ.get('POSTGRES_DB', 'techblogdb'),
+                'USER': os.environ.get('POSTGRES_USER', 'techblog'),
+                'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'techblogpass'),
+                'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+                'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            }
         }
-    }
+    else:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': ':memory:',
+            }
+        }
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',

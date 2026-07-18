@@ -68,6 +68,9 @@ jobs:
           SECRET_KEY: test-key
           DEBUG: 'False'
           ALLOWED_HOSTS: localhost,127.0.0.1,testserver,blog.iohub.link
+          # Run the suite against the same engine as production (service container above)
+          TEST_DB_ENGINE: postgres
+          POSTGRES_HOST: localhost
         run: |
           python -m pytest -v --cov=techblog_cms --cov-report=xml
 
