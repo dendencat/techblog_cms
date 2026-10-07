@@ -244,3 +244,6 @@ infra/**/*.tfvars
 !infra/**/*.tfvars.example
 infra/**/backend_r2.tf
 infra/**/crash.log
+
+# Local backups (scripts/backup.sh)
+backups/

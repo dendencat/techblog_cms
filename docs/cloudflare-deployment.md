@@ -99,6 +99,39 @@ curl -sI https://blog.iohub.link/dashboard/  # 302 → <team>.cloudflareaccess.c
 - **メディアファイル**: アップロード画像は従来どおりオリジンの `media_volume` に保存されます。DB と合わせてバックアップしてください
 - **秘密情報**: API トークン・Tunnel トークン・R2 キーはリポジトリにコミットしません(`.gitignore` で `*.tfvars`・`backend_r2.tf`・state を除外済み)
 
+## 自宅マシンで運用する
+
+オリジンは自宅のマシンで動かす前提です(2026-10-07 決定)。Tunnel は外向き接続だけなので、
+ルーターのポート開放・固定 IP・DDNS はいずれも不要です。
+
+**マシンの目安**: 64bit Linux(Ubuntu Server / Debian / Raspberry Pi OS 64bit)、メモリ 2GB 以上、
+ストレージは SSD 推奨。Raspberry Pi 5(4GB 以上)でも動きます。使うイメージはすべて arm64 に対応しています。
+
+**最初に一度だけやること**
+1. OS の自動セキュリティ更新を有効にする(Ubuntu/Debian: `sudo apt install unattended-upgrades`)
+2. Docker を起動時に自動起動する(`sudo systemctl enable docker`)。各コンテナは `restart: always` なので、
+   停電や再起動の後も自動で戻ります
+3. ルーターのポート開放はしない。マシンの SSH も家庭内 LAN からだけにする(インターネットに公開しない)
+4. バックアップを cron に登録する(下記)
+
+**バックアップ**: `scripts/backup.sh` が DB(pg_dump)とアップロード画像を日付付きで保存し、14 日より
+古いものを消します。マシンが壊れても戻せるよう、`BACKUP_DIR` は USB ディスクなど別の媒体にしてください。
+
+```bash
+# 毎日 3:30 に実行(crontab -e で追記)
+30 3 * * * BACKUP_DIR=/mnt/usb/techblog /path/to/techblog_cms/scripts/backup.sh >> $HOME/techblog-backup.log 2>&1
+```
+
+復元するとき:
+
+```bash
+gunzip -c db_YYYYMMDD_HHMMSS.sql.gz | docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml run --rm -T --no-deps --entrypoint tar django -C /app/media -xzf - < media_YYYYMMDD_HHMMSS.tar.gz
+```
+
+**止まっている間**: マシンや回線が落ちている間はブログが表示されません(Cloudflare のエラーページになります)。
+復旧すれば cloudflared が自動で再接続します。
+
 ## 費用
 
 Cloudflare 側はすべて **Free プランの範囲**で動く構成です。有料の機能(Pro 以上の Managed WAF、
@@ -121,7 +154,7 @@ Argo、Load Balancing、Workers Paid、Containers など)は使っていませ�
 
 | 選択肢 | 月額の目安 | 備考 |
 |---|---|---|
-| 自宅の PC / Raspberry Pi 5(4GB 以上)| 電気代のみ(数百円程度)| 停電・回線断の間は閲覧不可 |
+| **自宅の PC / Raspberry Pi 5(4GB 以上)(採用)** | 電気代のみ(数百円程度)| 停電・回線断の間は閲覧不可 |
 | Oracle Cloud Always Free(Arm VM)| 0 円 | 無料だが登録にクレジットカードが必要。アイドル状態の VM は回収されることがある |
 | 低価格 VPS(1〜2GB メモリ)| 500〜1,000 円程度 | 最も安定。要検証: 料金は各社の最新価格を確認 |
 
