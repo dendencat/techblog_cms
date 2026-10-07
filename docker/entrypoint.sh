@@ -10,16 +10,18 @@ if [ ! -f /app/logs/error.log ]; then
 fi
 
 # ログディレクトリの権限設定
+# chown は root 実行時のみ成功する。非 root(compose の user: appuser)では
+# ボリューム所有権はイメージ側の設定(Dockerfile)で継承されるため、失敗しても致命的でない。
 echo "Setting up log directory..."
 mkdir -p /app/logs
-chown -R appuser:appgroup /app/logs
+chown -R appuser:appgroup /app/logs || true
 chmod 755 /app/logs || true
 chmod 664 /app/logs/access.log || true
 
 # 静的ファイルディレクトリの作成と権限設定（collectstatic 前に実施）
 echo "Preparing static directory..."
 mkdir -p /app/static
-chown -R appuser:appgroup /app/static
+chown -R appuser:appgroup /app/static || true
 chmod -R 755 /app/static || true
 
 # -------------------------------------------
@@ -33,13 +35,13 @@ done
 echo "Database is available!"
 
 # -------------------------------------------
-# データベースマイグレーションの実行
+# データベースマイグレーションの適用
 # -------------------------------------------
-echo "Creating migrations..."
-python manage.py makemigrations
+echo "Checking for pending model migrations..."
+python manage.py makemigrations --check --dry-run
 
 echo "Applying migrations..."
-python manage.py migrate
+python manage.py migrate --noinput --fake-initial
 
 # -------------------------------------------
 # 開発環境の場合はマイグレーションファイルの作成とテストデータの作成

@@ -1,4 +1,0 @@
-Django
-gunicorn
-psycopg2-binary
-redis

@@ -1,56 +1,99 @@
+import importlib
+import logging
+import re
 import markdown
 from django import template
+from django.conf import settings
 from django.utils.safestring import mark_safe
 
 register = template.Library()
+logger = logging.getLogger(__name__)
 
-
-def _resolve_linkify_extension():
-    """Return a linkify extension instance if one is available."""
+LINKIFY_EXTENSION = None
+try:
+    importlib.import_module('markdown.extensions.linkify')
+    LINKIFY_EXTENSION = 'markdown.extensions.linkify'
+except ModuleNotFoundError:
     try:
-        from markdown.extensions.linkify import LinkifyExtension
+        # Fallback when Markdown's native linkify is unavailable.
+        importlib.import_module('pymdownx.magiclink')
+        LINKIFY_EXTENSION = 'pymdownx.magiclink'
+    except ModuleNotFoundError:
+        logger.warning(
+            'Neither markdown.extensions.linkify nor pymdownx.magiclink available; '
+            'falling back to plain-URL rewriter.'
+        )
 
-        return LinkifyExtension()
-    except ImportError:
-        try:
-            from pymdownx.magiclink import MagiclinkExtension
+IMG_TAG_SRC_PATTERN = re.compile(r'(<img[^>]+src=")([^"]+)(")')
+RELATIVE_URI_PATTERN = re.compile(r'^(?:https?:|data:|/)', re.IGNORECASE)
+PLAIN_URL_PATTERN = re.compile(r'(?<![\"=])(https?://[^\s<]+)')
 
-            # Magiclink provides linkify behaviour when Markdown's native
-            # extension is unavailable.
-            return MagiclinkExtension()
-        except ImportError:
-            return None
+
+def _resolve_image_source(src: str) -> str:
+    """Translate a user-provided Markdown image reference into a public media URL."""
+    if not src:
+        return ''
+    candidate = src.strip()
+    if not candidate or RELATIVE_URI_PATTERN.match(candidate):
+        return candidate
+
+    media_url = getattr(settings, 'MEDIA_URL', '/media/').rstrip('/') or '/media'
+    if candidate.startswith('articles/'):
+        path = candidate
+    else:
+        path = f"articles/{candidate.lstrip('/')}"
+    return f"{media_url}/{path}"
+
+
+def _rewrite_image_sources(html: str) -> str:
+    if not html:
+        return html
+
+    def _replace(match: re.Match) -> str:
+        prefix, src, suffix = match.groups()
+        return f'{prefix}{_resolve_image_source(src)}{suffix}'
+
+    return IMG_TAG_SRC_PATTERN.sub(_replace, html)
+
+
+def _linkify_plain_urls(html: str) -> str:
+    if LINKIFY_EXTENSION or not html:
+        return html
+
+    def _replace(match: re.Match) -> str:
+        url = match.group(1).rstrip('.,)')
+        trailing = match.group(1)[len(url):]
+        return f'<a href="{url}">{url}</a>{trailing}'
+
+    return PLAIN_URL_PATTERN.sub(_replace, html)
 
 
 @register.filter
 def markdown_to_html(text):
-    """Convert markdown text to HTML with optional auto-linking."""
+    """
+    Convert markdown text to HTML
+    """
     if not text:
-        return ""
+        return ''
 
     extensions = [
-        "extra",  # Extra features like tables, footnotes, and raw HTML
-        "codehilite",  # Code highlighting with Pygments
-        "toc",  # Table of contents
-        "fenced_code",  # Fenced code blocks
-        "nl2br",  # Convert newlines to <br>
+        'extra',
+        'codehilite',
+        'toc',
+        'fenced_code',
+        'nl2br',
     ]
+    if LINKIFY_EXTENSION:
+        extensions.append(LINKIFY_EXTENSION)
 
-    linkify_extension = _resolve_linkify_extension()
-    if linkify_extension:
-        extensions.append(linkify_extension)
+    html = markdown.markdown(text, extensions=extensions, extension_configs={
+        'codehilite': {
+            'linenums': False,
+            'guess_lang': False,
+            'css_class': 'highlight',
+            'pygments_style': 'github-dark',
+        }
+    })
 
-    html = markdown.markdown(
-        text,
-        extensions=extensions,
-        extension_configs={
-            "codehilite": {
-                "linenums": False,  # Disable line numbers
-                "guess_lang": True,  # Guess language if not specified
-                "css_class": "highlight",  # CSS class for code blocks
-                "pygments_style": "github-dark",  # Use GitHub-like dark theme
-            }
-        },
-    )
-
-    return mark_safe(html)
+    html = _linkify_plain_urls(html)
+    return mark_safe(_rewrite_image_sources(html))

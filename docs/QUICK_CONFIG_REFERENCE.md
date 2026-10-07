@@ -86,7 +86,6 @@ techblog_cms/
 ├── docker-compose.override.yml  # Development overrides (git ignored)
 ├── techblog_cms/          # Django application
 │   ├── settings.py        # Main settings
-│   ├── settings_production.py  # Production overrides
 │   └── management/        # Custom commands
 ├── nginx/                 # Web server config
 │   ├── conf.d/           # Site configurations

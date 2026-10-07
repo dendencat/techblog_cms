@@ -19,9 +19,7 @@
             <p class="text-gray-600 mb-4">{{ category.description }}</p>
             {% endif %}
             <div class="text-sm text-gray-500">
-                {% with article_count=category.article_set.count %}
-                {{ article_count }} article{{ article_count|pluralize }}
-                {% endwith %}
+                {{ category.num_articles }} article{{ category.num_articles|pluralize }}
             </div>
         </div>
         {% empty %}

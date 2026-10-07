@@ -11,16 +11,55 @@
     <div class="alert alert-danger" style="margin-bottom: 20px;">{{ error }}</div>
     {% endif %}
 
-    <form method="post" id="articleForm" action="{% if article %}{% url 'article_edit' article.slug %}{% else %}{% url 'article_new' %}{% endif %}" class="flex flex-col h-full">
-      {% if not IS_TESTING %}
+    <form method="post" id="articleForm" enctype="multipart/form-data" action="{% if article %}{% url 'article_edit' article.slug %}{% else %}{% url 'article_new' %}{% endif %}" class="flex flex-col h-full">
       {% csrf_token %}
-      {% endif %}
 
       <div class="form-group mb-4">
         <label for="title" class="font-bold">タイトル</label>
         <input id="title" name="title" type="text" required
                value="{{ title_value|default:'' }}"
                class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-200" />
+      </div>
+
+      <div class="form-group mb-4">
+        <label for="images" class="font-bold">記事画像 (複数可)</label>
+        <input id="images" name="images" type="file" accept="image/*" multiple
+               class="mt-1 w-full px-3 py-2 border border-dashed border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-200 bg-white" />
+        {% if image_help_text %}
+        <p class="mt-1 text-sm text-gray-500">{{ image_help_text }}</p>
+        {% endif %}
+        {% if image_error %}
+        <p class="mt-1 text-sm text-red-600">{{ image_error }}</p>
+        {% endif %}
+        <div id="pending-image-preview"
+             class="mt-3 hidden">
+          <p class="text-sm text-gray-600 mb-2">アップロード予定の画像プレビュー</p>
+          <div id="pending-image-grid" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
+        </div>
+        {% if inline_images %}
+        <div class="mt-4">
+          <p class="text-sm font-semibold text-gray-700 mb-2">アップロード済みの画像</p>
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" id="existing-inline-images">
+            {% for inline_image in inline_images %}
+            <div class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden existing-inline-image"
+                 data-filename="{{ inline_image.filename }}"
+                 data-url="{{ inline_image.image.url }}">
+              <img src="{{ inline_image.image.url }}"
+                   alt="{{ inline_image.filename }}"
+                   class="w-full h-48 object-cover bg-gray-100" />
+              <div class="px-3 py-2 text-xs text-gray-600 space-y-1">
+                <div>ファイル名:
+                  <code class="bg-gray-100 px-1 py-0.5 rounded image-filename">{{ inline_image.filename }}</code>
+                </div>
+                <div>Markdown:
+                  <code class="bg-gray-100 px-1 py-0.5 rounded break-all">![タイトル]({{ inline_image.filename }})</code>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
       </div>
 
       <!-- 書式バー -->
@@ -30,6 +69,7 @@
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="h3" title="見出し3" aria-label="見出し3">H3</button>
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="bold" title="太字" aria-label="太字"><strong>B</strong></button>
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="italic" title="斜体" aria-label="斜体"><em>I</em></button>
+        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="image" title="画像" aria-label="画像">🖼️</button>
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="link" title="リンク" aria-label="リンク">🔗</button>
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="code" title="コード" aria-label="コード">`</button>
         <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="list" title="リスト" aria-label="リスト">•</button>
@@ -117,9 +157,37 @@
 .markdown-preview ul, .markdown-preview ol { margin: 10px 0; padding-left: 20px; }
 .markdown-preview a { color: #007bff; text-decoration: none; }
 .markdown-preview a:hover { text-decoration: underline; }
+.markdown-preview img { max-width: 100%; height: auto; display: block; margin: 0.75em auto; border-radius: 0.5rem; background: #fff; padding: 4px; box-shadow: 0 1px 4px rgba(15,23,42,0.12); }
 </style>
 
 <script>
+const MEDIA_URL_TEMPLATE = "{{ media_url|default:'/media/'|escapejs }}";
+const MEDIA_URL = MEDIA_URL_TEMPLATE || '/media/';
+const MEDIA_URL_BASE = MEDIA_URL.replace(/\/$/, '');
+const ARTICLE_MEDIA_SUBDIR = 'articles/';
+
+function resolveMediaPath(rawSrc) {
+  if (!rawSrc) {
+    return '';
+  }
+  const trimmed = rawSrc.trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (/^(?:https?:|data:|\/)/i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.startsWith(ARTICLE_MEDIA_SUBDIR)) {
+    return `${MEDIA_URL_BASE}/${trimmed}`;
+  }
+  const normalized = trimmed.replace(/^\/+/, '');
+  return `${MEDIA_URL_BASE}/${ARTICLE_MEDIA_SUBDIR}${normalized}`;
+}
+
+function escapeAttribute(value) {
+  return String(value || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
 // マークダウン変換関数
 function markdownToHtml(markdown) {
   // 基本的な変換処理
@@ -134,8 +202,13 @@ function markdownToHtml(markdown) {
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     // インラインコード
     .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // 画像
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+      const resolvedSrc = resolveMediaPath(src);
+      return `<img src="${escapeAttribute(resolvedSrc)}" alt="${escapeAttribute(alt)}" class="markdown-inline-image">`;
+    })
     // リンク
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, href) => `<a href="${escapeAttribute(href)}">${text}</a>`)
     // リスト
     .replace(/^\- (.*$)/gim, '<li>$1</li>')
     // 引用
@@ -161,9 +234,13 @@ function debounce(fn, delay) {
 
 async function serverRenderMarkdown(markdown) {
   try {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
     const resp = await fetch('/api/preview_markdown/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrfToken ? csrfToken.value : ''
+      },
       body: 'text=' + encodeURIComponent(markdown || '')
     });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -185,6 +262,18 @@ async function updatePreview() {
   }
 }
 const updatePreviewDebounced = debounce(updatePreview, 250);
+
+let lastImageFilename = '';
+
+function updateLastImageFilename(name) {
+  if (typeof name !== 'string') {
+    return;
+  }
+  const trimmed = name.trim();
+  if (trimmed) {
+    lastImageFilename = trimmed;
+  }
+}
 
 // 書式ボタンの処理
 function applyFormatting(format) {
@@ -210,6 +299,25 @@ function applyFormatting(format) {
     case 'italic':
       replacement = selectedText ? '*' + selectedText + '*' : '**';
       break;
+    case 'image': {
+      const defaultAlt = selectedText || '画像タイトル';
+      const altInput = prompt('画像のタイトル (代替テキスト) を入力してください。', defaultAlt);
+      if (altInput === null) {
+        textarea.setSelectionRange(start, end);
+        return;
+      }
+      const filenameSuggestion = lastImageFilename;
+      const fileInputName = prompt('挿入する画像ファイル名を入力してください（例: sample.png）。', filenameSuggestion || 'sample.png');
+      if (fileInputName === null || fileInputName.trim() === '') {
+        textarea.setSelectionRange(start, end);
+        return;
+      }
+      const finalAlt = altInput.trim() || defaultAlt;
+      const finalFilename = fileInputName.trim();
+      replacement = '![' + finalAlt + '](' + finalFilename + ')';
+      updateLastImageFilename(finalFilename);
+      break;
+    }
     case 'link':
       replacement = selectedText ? '[' + selectedText + '](URL)' : '[リンクテキスト](URL)';
       break;
@@ -244,6 +352,108 @@ function applyFormatting(format) {
 document.addEventListener('DOMContentLoaded', function() {
   const textarea = document.getElementById('content');
   const formatBtns = document.querySelectorAll('.format-btn');
+  const imageInput = document.getElementById('images');
+  const pendingPreviewWrapper = document.getElementById('pending-image-preview');
+  const pendingPreviewGrid = document.getElementById('pending-image-grid');
+  const existingInlineImageEls = document.querySelectorAll('.existing-inline-image');
+
+  const extractFileName = (path) => {
+    if (!path) {
+      return '';
+    }
+    const normalized = String(path).split('?')[0];
+    const parts = normalized.split('/').filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : normalized;
+  };
+
+  const clearChildren = (node) => {
+    if (!node) {
+      return;
+    }
+    while (node.firstChild) {
+      node.removeChild(node.firstChild);
+    }
+  };
+
+  const renderPendingImages = (fileList) => {
+    if (!pendingPreviewWrapper || !pendingPreviewGrid) {
+      return;
+    }
+    clearChildren(pendingPreviewGrid);
+    if (!fileList || !fileList.length) {
+      pendingPreviewWrapper.classList.add('hidden');
+      return;
+    }
+
+    pendingPreviewWrapper.classList.remove('hidden');
+    Array.from(fileList).forEach((file) => {
+      if (!file) {
+        return;
+      }
+      updateLastImageFilename(file.name || '');
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const fileSrc = e.target?.result;
+        const fileName = file.name || extractFileName(fileSrc);
+        updateLastImageFilename(file.name || fileName);
+
+        const card = document.createElement('div');
+        card.className = 'pending-image-card border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden';
+
+        const img = document.createElement('img');
+        img.src = fileSrc;
+        img.alt = fileName || '選択した画像プレビュー';
+        img.className = 'w-full h-48 object-contain bg-gray-100';
+
+        const meta = document.createElement('div');
+        meta.className = 'px-3 py-2 text-xs text-gray-600 space-y-1';
+
+        const filenameRow = document.createElement('div');
+        const filenameLabel = document.createElement('span');
+        filenameLabel.textContent = 'ファイル名: ';
+        const filenameCode = document.createElement('code');
+        filenameCode.className = 'bg-gray-100 px-1 py-0.5 rounded';
+        filenameCode.textContent = fileName || '';
+        filenameRow.appendChild(filenameLabel);
+        filenameRow.appendChild(filenameCode);
+
+        const markdownRow = document.createElement('div');
+        const markdownLabel = document.createElement('span');
+        markdownLabel.textContent = 'Markdown: ';
+        const markdownCode = document.createElement('code');
+        markdownCode.className = 'bg-gray-100 px-1 py-0.5 rounded break-all';
+        const snippetName = fileName || '画像';
+        markdownCode.textContent = `![${snippetName}](${fileName || ''})`;
+        markdownRow.appendChild(markdownLabel);
+        markdownRow.appendChild(markdownCode);
+
+        meta.appendChild(filenameRow);
+        meta.appendChild(markdownRow);
+
+        card.appendChild(img);
+        card.appendChild(meta);
+
+        pendingPreviewGrid.appendChild(card);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  existingInlineImageEls.forEach((el) => {
+    const filename = el.getAttribute('data-filename');
+    if (filename) {
+      updateLastImageFilename(filename);
+    }
+  });
+
+  if (imageInput) {
+    imageInput.addEventListener('change', () => {
+      renderPendingImages(imageInput.files);
+    });
+    if (imageInput.files && imageInput.files.length) {
+      renderPendingImages(imageInput.files);
+    }
+  }
 
   // 入力時のプレビュー更新（debounce）
   textarea.addEventListener('input', updatePreviewDebounced);

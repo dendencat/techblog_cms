@@ -56,8 +56,8 @@ services:
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
       # Prefer passing through DATABASE_URL from .env to avoid duplication
       DATABASE_URL: ${DATABASE_URL}
-      # Use REDIS_URL from environment so encoded passwords stay intact
-      REDIS_URL: ${REDIS_URL}
+      # Pass through REDIS_URL so URL-encoded credentials remain intact
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       DJANGO_SETTINGS_MODULE: techblog_cms.settings
       PYTHONPATH: /app
       DJANGO_ENV: production
@@ -116,7 +116,9 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - techblog_network
+      techblog_network:
+        aliases:
+          - cache
     restart: always
     user: redis
     deploy:
@@ -126,23 +128,6 @@ services:
           memory: 256M
     # Security: Requires a password for authentication.
     # Consider network restrictions for enhanced security.
-
-  # Static Files Server
-  static:
-    image: nginx:alpine
-    volumes:
-      - static_volume:/usr/share/nginx/html
-    ports:
-      - "8080:80"
-    networks:
-      - techblog_network
-    restart: unless-stopped
-    user: root
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 128M
 
   certbot:
     image: certbot/certbot:latest
