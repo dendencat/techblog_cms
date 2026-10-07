@@ -1,0 +1,9 @@
+# cp terraform.tfvars.example terraform.tfvars して値を埋める(terraform.tfvars はコミットしない)
+account_id            = "0123456789abcdef0123456789abcdef"
+zone_id               = "0123456789abcdef0123456789abcdef"
+hostname              = "blog.iohub.link"
+access_team_name      = "your-team"
+access_allowed_emails = ["you@example.com"]
+
+# iohub.link の他サブドメインに TLS 設定を強制したくない場合は false
+manage_zone_settings = true

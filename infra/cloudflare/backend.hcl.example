@@ -1,0 +1,18 @@
+# Terraform state を Cloudflare R2 に置く設定。cp backend.hcl.example backend.hcl して埋める。
+# アクセスキーは backend.hcl に書かず、環境変数 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+# (R2 の API トークンから発行した S3 互換キー)で渡す。
+bucket = "techblog-cms-tfstate"
+key    = "cloudflare/terraform.tfstate"
+region = "auto"
+
+endpoints = {
+  s3 = "https://<ACCOUNT_ID>.r2.cloudflarestorage.com"
+}
+
+skip_credentials_validation = true
+skip_region_validation      = true
+skip_requesting_account_id  = true
+skip_metadata_api_check     = true
+skip_s3_checksum            = true
+use_path_style              = true
+use_lockfile                = true

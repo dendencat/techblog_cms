@@ -35,3 +35,6 @@ out
 # Docker
 Dockerfile*
 docker-compose*
+
+# Infrastructure as code (not needed in the image)
+infra

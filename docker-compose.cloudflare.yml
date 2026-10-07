@@ -1,0 +1,41 @@
+# Cloudflare Tunnel で公開する本番構成。
+#
+#   docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d
+#
+# - ホストには 80/443/6379 を含め一切ポートを公開しない(cloudflared の外向き接続のみ)
+# - TLS はエッジで終端するので certbot は不要(letsencrypt プロファイルに退避)
+# - CLOUDFLARE_TUNNEL_TOKEN は .env に置く(`terraform output -raw tunnel_token` の値)
+# 要: Docker Compose v2.24 以降(!reset タグを使うため)
+
+services:
+  nginx:
+    ports: !reset []
+    volumes:
+      - ./nginx/cloudflare:/etc/nginx/conf.d:ro
+
+  redis:
+    ports: !reset []
+
+  certbot:
+    profiles: ["letsencrypt"]
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.0
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN を .env に設定してください}
+    depends_on:
+      - nginx
+    networks:
+      - techblog_network
+    restart: always
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
