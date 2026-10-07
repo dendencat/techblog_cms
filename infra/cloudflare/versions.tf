@@ -8,10 +8,9 @@ terraform {
     }
   }
 
-  # State は Cloudflare R2(S3 互換)に置く。Tunnel トークンが state に入るため、
-  # 公開リポジトリやローカルの共有フォルダには置かないこと。
-  # 接続情報は `terraform init -backend-config=backend.hcl` で渡す(backend.hcl.example 参照)。
-  backend "s3" {}
+  # 既定は手元のローカル state(費用ゼロ・追加サービス不要)。Tunnel トークンが入るため
+  # terraform.tfstate はコミットしない(.gitignore 済み)。複数台から操作したくなったら
+  # backend_r2.tf.example を参照して R2 に移せる(R2 無料枠内)。
 }
 
 # 認証は環境変数 CLOUDFLARE_API_TOKEN で渡す(リポジトリには書かない)。

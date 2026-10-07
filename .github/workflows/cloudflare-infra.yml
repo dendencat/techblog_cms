@@ -11,12 +11,6 @@ on:
       - "infra/cloudflare/**"
       - ".github/workflows/cloudflare-infra.yml"
   workflow_dispatch:
-    inputs:
-      action:
-        description: "plan のみ、または apply まで実行"
-        type: choice
-        options: ["plan", "apply"]
-        default: "plan"
 
 permissions:
   contents: read
@@ -26,7 +20,8 @@ defaults:
     working-directory: infra/cloudflare
 
 jobs:
-  # シークレット不要の静的チェック。PR ごとに走る。
+  # シークレット不要の静的チェックのみ。Cloudflare への apply は手元で実行する
+  # (state をローカルに置き、トークンを GitHub に預けないため)。
   validate:
     runs-on: ubuntu-latest
     steps:
@@ -37,42 +32,3 @@ jobs:
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false -input=false
       - run: terraform validate
-
-  # 実際の Cloudflare への反映は手動実行のみ。environment の承認ルールで二重に止める。
-  deploy:
-    if: github.event_name == 'workflow_dispatch'
-    needs: validate
-    runs-on: ubuntu-latest
-    environment: cloudflare-production
-    concurrency: cloudflare-infra
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      TF_VAR_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      TF_VAR_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
-      TF_VAR_access_team_name: ${{ vars.CLOUDFLARE_ACCESS_TEAM_NAME }}
-      TF_VAR_access_allowed_emails: ${{ vars.CLOUDFLARE_ACCESS_ALLOWED_EMAILS }}
-      TF_IN_AUTOMATION: "1"
-    steps:
-      - uses: actions/checkout@v5
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.13.3"
-      - name: Init (state on R2)
-        run: |
-          terraform init -input=false \
-            -backend-config="bucket=${{ vars.TFSTATE_R2_BUCKET }}" \
-            -backend-config="key=cloudflare/terraform.tfstate" \
-            -backend-config="region=auto" \
-            -backend-config="endpoints={s3=\"https://${TF_VAR_account_id}.r2.cloudflarestorage.com\"}" \
-            -backend-config="skip_credentials_validation=true" \
-            -backend-config="skip_region_validation=true" \
-            -backend-config="skip_requesting_account_id=true" \
-            -backend-config="skip_metadata_api_check=true" \
-            -backend-config="skip_s3_checksum=true" \
-            -backend-config="use_path_style=true" \
-            -backend-config="use_lockfile=true"
-      - run: terraform plan -input=false -out=tfplan
-      - if: inputs.action == 'apply'
-        run: terraform apply -input=false tfplan

@@ -242,5 +242,5 @@ infra/**/*.tfstate
 infra/**/*.tfstate.*
 infra/**/*.tfvars
 !infra/**/*.tfvars.example
-infra/**/backend.hcl
+infra/**/backend_r2.tf
 infra/**/crash.log

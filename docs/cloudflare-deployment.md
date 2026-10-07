@@ -36,35 +36,27 @@ Let's Encrypt/certbot はエッジで TLS を終端するため不要になり�
    - Account: `Cloudflare Tunnel: Edit`, `Access: Apps and Policies: Edit`
    - Zone(iohub.link のみ): `DNS: Edit`, `Zone Settings: Edit`, `Zone WAF: Edit`, `Cache Rules: Edit`
    - 権限名はダッシュボードの表記に合わせて選択してください(要検証: 権限名は Cloudflare 側で改称されることがあります)
-4. **Terraform state 用の R2 バケット**(例: `techblog-cms-tfstate`)と、その R2 API トークンの S3 互換アクセスキー。
-   state には Tunnel トークンが入るため、公開されない場所に置きます
-5. **オリジンホスト**: Docker Compose v2.24 以降が動く Linux マシン(VPS など)。受信ポートの開放は不要です
+4. **オリジンホスト**: Docker Compose v2.24 以降が動く Linux マシン。受信ポートの開放も固定 IP も不要です(下の「費用」参照)
 
 ## 手順
 
-### 1. Cloudflare 側のリソースを作る(Terraform)
+### 1. Cloudflare 側のリソースを作る(Terraform、手元の PC で実行)
 
 ```bash
 cd infra/cloudflare
 cp terraform.tfvars.example terraform.tfvars   # 値を埋める(コミットしない)
-cp backend.hcl.example backend.hcl             # <ACCOUNT_ID> を埋める(コミットしない)
-
 export CLOUDFLARE_API_TOKEN=...                # 手順 3 のトークン
-export AWS_ACCESS_KEY_ID=...                   # R2 の S3 互換キー
-export AWS_SECRET_ACCESS_KEY=...
 
-terraform init -backend-config=backend.hcl
+terraform init
 terraform plan      # 作成されるものを必ず確認する
 terraform apply
+terraform output -raw tunnel_token             # オリジンの .env に設定する値
 ```
 
-GitHub Actions から実行する場合は `Cloudflare Infra` ワークフローを手動実行します(`plan` / `apply` を選択)。
-事前に以下を設定してください。
-
-- Environment `cloudflare-production` を作成し、Required reviewers を設定(apply の最終承認)
-- Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
-- Variables: `CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_ACCESS_TEAM_NAME`, `TFSTATE_R2_BUCKET`,
-  `CLOUDFLARE_ACCESS_ALLOWED_EMAILS`(JSON 配列。例: `["you@example.com"]`)
+state(`terraform.tfstate`)は手元に保存されます。Tunnel トークンを含むのでコミットせず、
+PC のバックアップ対象に入れてください。複数の PC から操作したくなった場合だけ、
+`backend_r2.tf.example` を使って R2(無料枠内)に移せます。
+GitHub Actions では構文チェック(fmt/validate)のみ行い、API トークンは GitHub に預けません。
 
 ### 2. オリジンホストで起動する
 
@@ -105,7 +97,35 @@ curl -sI https://blog.iohub.link/dashboard/  # 302 → <team>.cloudflareaccess.c
   ダッシュボードで既にルールを作っている場合、apply が衝突します。既存ルールを `terraform import` するか削除してから実行してください
 - **Free プランの制限**: レート制限は 1 ルール・10 秒単位です。Cloudflare Managed Ruleset(マネージド WAF)は Pro 以上で、Free では自動の Free Managed Ruleset が有効です
 - **メディアファイル**: アップロード画像は従来どおりオリジンの `media_volume` に保存されます。DB と合わせてバックアップしてください
-- **秘密情報**: API トークン・Tunnel トークン・R2 キーはリポジトリにコミットしません(`.gitignore` で `*.tfvars`・`backend.hcl`・state を除外済み)
+- **秘密情報**: API トークン・Tunnel トークン・R2 キーはリポジトリにコミットしません(`.gitignore` で `*.tfvars`・`backend_r2.tf`・state を除外済み)
+
+## 費用
+
+Cloudflare 側はすべて **Free プランの範囲**で動く構成です。有料の機能(Pro 以上の Managed WAF、
+Argo、Load Balancing、Workers Paid、Containers など)は使っていません。
+
+| 項目 | 使っている機能 | 費用 |
+|---|---|---|
+| DNS・CDN・TLS 証明書 | Free プラン | 0 円 |
+| オリジンの公開 | Cloudflare Tunnel | 0 円 |
+| 管理画面の保護 | Zero Trust Access(Free は 50 ユーザーまで) | 0 円 |
+| WAF カスタムルール | Free は 5 ルールまで(使用 2) | 0 円 |
+| レート制限 | Free は 1 ルールまで(使用 1) | 0 円 |
+| キャッシュルール | Free は 10 ルールまで(使用 1) | 0 円 |
+| Terraform state | 手元のローカルファイル | 0 円 |
+| CI(GitHub Actions)・Dependabot | 公開リポジトリは無料 | 0 円 |
+| ドメイン iohub.link | 取得済み(更新費のみ) | 既存 |
+
+費用が発生しうるのは **オリジンホスト** だけです。Tunnel は外向き接続だけで動くため、固定 IP や
+ポート開放は不要で、自宅のマシンでも安全に公開できます。
+
+| 選択肢 | 月額の目安 | 備考 |
+|---|---|---|
+| 自宅の PC / Raspberry Pi 5(4GB 以上)| 電気代のみ(数百円程度)| 停電・回線断の間は閲覧不可 |
+| Oracle Cloud Always Free(Arm VM)| 0 円 | 無料だが登録にクレジットカードが必要。アイドル状態の VM は回収されることがある |
+| 低価格 VPS(1〜2GB メモリ)| 500〜1,000 円程度 | 最も安定。要検証: 料金は各社の最新価格を確認 |
+
+全コンテナのメモリ上限の合計は約 1.5GB ですが、小規模ブログの実使用量はその半分程度の見込みです(要検証)。
 
 ## アプリとコンテナのセキュリティ対策
 
