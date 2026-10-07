@@ -177,7 +177,7 @@
     <h1 style="margin: 0; font-size: 2rem; font-weight: 600; color: #333;">ダッシュボード</h1>
     <div style="display: flex; gap: 10px;">
       <a href="{% url 'article_new' %}" class="btn btn-success" style="padding: 10px 20px; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; background-color: #28a745; color: white; border: 1px solid #28a745;">記事新規作成</a>
-      <a href="{% url 'logout' %}" class="btn btn-secondary" style="padding: 10px 20px; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; background-color: #6c757d; color: white; border: 1px solid #6c757d;">ログアウト</a>
+      <form method="post" action="{% url 'logout' %}" style="margin: 0;">{% csrf_token %}<button type="submit" class="btn btn-secondary" style="padding: 10px 20px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; background-color: #6c757d; color: white; border: 1px solid #6c757d;">ログアウト</button></form>
     </div>
   </div>
 

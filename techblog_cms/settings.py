@@ -3,6 +3,7 @@ import os
 import sys
 from pathlib import Path
 from decouple import config, Csv
+from django.core.exceptions import ImproperlyConfigured
 from urllib.parse import urlparse, unquote
 
 logger = logging.getLogger(__name__)
@@ -142,6 +143,18 @@ else:
                 'PORT': os.environ.get('POSTGRES_PORT', '5432'),
             }
         }
+
+# Fail closed: never run a production process with a missing or placeholder key.
+INSECURE_SECRET_KEYS = {'', 'django-insecure-default-key', 'your-secret-key-here'}
+if not DEBUG and not IS_TESTING and (
+    SECRET_KEY in INSECURE_SECRET_KEYS
+    or SECRET_KEY.startswith('django-insecure')
+    or len(SECRET_KEY) < 50
+):
+    raise ImproperlyConfigured(
+        'SECRET_KEY must be set to a random value of at least 50 characters in production. '
+        "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+    )
 
 DATABASES['default']['CONN_MAX_AGE'] = config('CONN_MAX_AGE', default=60, cast=int)
 

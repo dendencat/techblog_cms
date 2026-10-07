@@ -111,7 +111,7 @@ services:
 
   # Caching - Redis
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD:-your_redis_password} # Set a password
     ports:
       - "6379:6379"

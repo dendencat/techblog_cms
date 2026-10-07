@@ -3,6 +3,7 @@
 #   docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d
 #
 # - ホストには 80/443/6379 を含め一切ポートを公開しない(cloudflared の外向き接続のみ)
+# - django はソースをマウントせず読み取り専用ルートファイルシステムで、権限を落として動かす
 # - TLS はエッジで終端するので certbot は不要(letsencrypt プロファイルに退避)
 # - CLOUDFLARE_TUNNEL_TOKEN は .env に置く(`terraform output -raw tunnel_token` の値)
 # 要: Docker Compose v2.24 以降(!reset タグを使うため)
@@ -12,9 +13,28 @@ services:
     ports: !reset []
     volumes:
       - ./nginx/cloudflare:/etc/nginx/conf.d:ro
+      - static_volume:/var/www/static:ro
+      - media_volume:/var/www/media:ro
+
+  django:
+    # 本番ではソースツリーをバインドマウントしない(イメージに焼いたコードだけを使い、
+    # ホスト上の .env やリポジトリをコンテナから読み書きさせない)
+    volumes: !override
+      - logs:/app/logs
+      - static_volume:/app/static
+      - media_volume:/app/media
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
   redis:
     ports: !reset []
+    # 既定パスワードへのフォールバックをなくす
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD を .env に設定してください}"]
 
   certbot:
     profiles: ["letsencrypt"]

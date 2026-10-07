@@ -72,13 +72,14 @@ GitHub Actions から実行する場合は `Cloudflare Infra` ワークフロー
 git clone https://github.com/dendencat/techblog_cms.git && cd techblog_cms
 cp .env.example .env
 # .env を編集:
-#   SECRET_KEY / DATABASE_URL / POSTGRES_* / REDIS_* を本番用の強い値に
+#   SECRET_KEY は python3 -c "import secrets; print(secrets.token_urlsafe(64))" で生成
+#   DATABASE_URL / POSTGRES_* / REDIS_* を本番用の強い値に
 #   ALLOWED_HOSTS=blog.iohub.link
 #   CSRF_TRUSTED_ORIGINS=https://blog.iohub.link
 #   CLOUDFLARE_TUNNEL_TOKEN=$(terraform output -raw tunnel_token) の値
 chmod 600 .env
 
-docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d --build   # 以降の更新は ./deploy.sh
 docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml exec django python manage.py createsuperuser
 ```
 
@@ -105,6 +106,29 @@ curl -sI https://blog.iohub.link/dashboard/  # 302 → <team>.cloudflareaccess.c
 - **Free プランの制限**: レート制限は 1 ルール・10 秒単位です。Cloudflare Managed Ruleset(マネージド WAF)は Pro 以上で、Free では自動の Free Managed Ruleset が有効です
 - **メディアファイル**: アップロード画像は従来どおりオリジンの `media_volume` に保存されます。DB と合わせてバックアップしてください
 - **秘密情報**: API トークン・Tunnel トークン・R2 キーはリポジトリにコミットしません(`.gitignore` で `*.tfvars`・`backend.hcl`・state を除外済み)
+
+## アプリとコンテナのセキュリティ対策
+
+| 対策 | 内容 |
+|---|---|
+| フレームワーク | Django 5.2 LTS(4.2 LTS はサポート終了で未修正の脆弱性あり) |
+| 記事本文の XSS | Markdown 変換後の HTML を nh3 の許可リストでサニタイズ(`<script>`・イベント属性・`javascript:` 等を除去) |
+| SECRET_KEY | 本番(DEBUG=False)では未設定・既定値・50 文字未満なら起動を拒否 |
+| ログアウト | POST + CSRF のみ受け付け(リンクや画像によるログアウト強制を防ぐ) |
+| 外部 CSS | バージョン固定 + Subresource Integrity |
+| アプリイメージ | コンパイラ・sudo・ブラウザ用ライブラリ・pip を含めない。UID 10001 の非 root、コードは読み取り専用 |
+| 本番コンテナ | django はソースをマウントせず read-only ルート FS、`cap_drop: ALL`、`no-new-privileges` |
+| 依存関係の監視 | CI で pip-audit と Trivy(django / nginx イメージ、HIGH 以上で失敗)、Dependabot で週次更新 |
+
+既知で受け入れている残リスク(2026-10-07 時点、Trivy で確認):
+
+- `postgres:16-alpine` の gosu に含まれる Go 標準ライブラリの脆弱性。compose で `user: postgres` を指定しており gosu は実行されず、DB は内部ネットワークのみ
+- `cloudflare/cloudflared` のベースイメージの libssl。上流の更新を Dependabot で取り込む
+- テンプレートにインラインの style/script が多く、厳格な Content-Security-Policy は未導入(今後の改善候補)
+
+既存の環境から移行する場合: アプリの UID が 10001 に変わったため、以前のボリュームを使い回すなら
+`docker run --rm -v techblog_cms_static_volume:/s -v techblog_cms_media_volume:/m -v techblog_cms_logs:/l alpine chown -R 10001:10001 /s /m /l`
+で所有者を合わせてください。
 
 ## ロールバック
 

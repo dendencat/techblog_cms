@@ -1,44 +1,20 @@
 #!/bin/bash
+# オリジンホストでの更新デプロイ(Cloudflare Tunnel 構成)。
+# 手順の全体像は docs/cloudflare-deployment.md を参照。
+set -euo pipefail
 
-# Exit on any error
-set -e
-
-# Navigate to the project directory
 cd "$(dirname "$0")"
 
-# Pull the latest changes from the repository
+COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml)
+
 echo "Pulling latest changes..."
-git pull origin main || {
-    echo "Failed to pull latest changes"
-    exit 1
-}
+git pull --ff-only origin main
 
-# Stop and remove existing containers
-echo "Stopping and removing existing containers..."
-docker compose down || {
-    echo "Failed to stop containers"
-    exit 1
-}
+echo "Building images..."
+"${COMPOSE[@]}" build --pull
 
-# Install the Python package in development mode inside the container
-echo "Installing Python package..."
-docker compose run --rm django pip install -e . || {
-    echo "Failed to install Python package"
-    exit 1
-}
-
-# Build the Docker images
-echo "Building Docker images..."
-docker compose build --no-cache || {
-    echo "Failed to build images"
-    exit 1
-}
-
-# Start the containers
-echo "Starting the containers..."
-docker compose up -d || {
-    echo "Failed to start containers"
-    exit 1
-}
+echo "Starting containers..."
+"${COMPOSE[@]}" up -d --remove-orphans
 
 echo "Deployment completed!"
+"${COMPOSE[@]}" ps

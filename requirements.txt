@@ -1,5 +1,9 @@
-# Core dependencies
-Django==4.2.30
+# Runtime dependencies (installed into the production image).
+# Test/dev tools live in requirements-dev.txt.
+
+# Core
+# Django 5.2 is the current LTS (security support until April 2028); 4.2 LTS is end-of-life.
+Django>=5.2.18,<5.3
 python-decouple>=3.8,<4.0
 Pillow>=12.1.1,<13.0
 Pygments>=2.15,<3.0
@@ -15,23 +19,9 @@ django-redis>=5.4,<6.0
 gunicorn>=23.0,<24.0
 
 # HTTP client (for healthcheck)
-requests>=2.31,<3.0
+requests>=2.32.4,<3.0
 
-# Testing
-pytest>=7.4,<8.0
-pytest-django>=4.7,<5.0
-pytest-cov>=4.1,<5.0
-playwright>=1.40,<2.0
-
-# Code quality
-
-# Documentation
+# Markdown rendering and HTML sanitization of rendered articles
 markdown>=3.5,<4.0
 linkify-it-py>=2.0,<3.0
-
-# Optional: Image processing
-# Pillow>=10.1,<11.0
-
-# Optional: API framework
-# djangorestframework>=3.14,<4.0
-# django-filter>=23.5,<24.0
+nh3>=0.3,<0.4

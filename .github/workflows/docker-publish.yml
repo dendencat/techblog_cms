@@ -49,8 +49,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-django pytest-cov
+          pip install -r requirements-dev.txt
           
       - name: Check migrations
         env:
@@ -85,8 +84,9 @@ jobs:
 
       - name: Generate a self-consistent .env
         run: |
-          cat > .env <<'ENV'
-          SECRET_KEY=ci-smoke-secret-key
+          # settings.py refuses weak keys in production mode, so generate a real one.
+          echo "SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(64))')" > .env
+          cat >> .env <<'ENV'
           DEBUG=False
           ALLOWED_HOSTS=localhost,127.0.0.1,django
           POSTGRES_DB=techblogdb
@@ -128,8 +128,23 @@ jobs:
         if: failure()
         run: docker compose logs django db redis
 
+  # Known-vulnerability check of the pinned Python dependencies (runtime + dev).
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pip-audit>=2.9,<3.0"
+          pip-audit -r requirements-dev.txt --progress-spinner off
+
   build:
-    needs: [test, smoke]
+    needs: [test, smoke, dependency-audit]
     runs-on: ubuntu-latest
 
     steps:
@@ -168,11 +183,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Pinned Trivy release image instead of a moving `@master` action ref (supply-chain risk).
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.75.0 image \
+            --exit-code 1 --ignore-unfixed --severity CRITICAL,HIGH --format table \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+
+      - name: Build and scan the nginx image
+        run: |
+          docker build -f Dockerfile.nginx -t techblog-nginx:ci .
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.75.0 image \
+            --exit-code 1 --ignore-unfixed --severity CRITICAL,HIGH --format table \
+            techblog-nginx:ci

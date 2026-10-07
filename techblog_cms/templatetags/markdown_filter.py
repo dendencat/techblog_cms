@@ -2,6 +2,7 @@ import importlib
 import logging
 import re
 import markdown
+import nh3
 from django import template
 from django.conf import settings
 from django.utils.safestring import mark_safe
@@ -17,7 +18,7 @@ except ModuleNotFoundError:
     logger.warning('markdown.extensions.linkify not available; auto-linking disabled.')
 
 IMG_TAG_SRC_PATTERN = re.compile(r'(<img[^>]+src=")([^"]+)(")')
-RELATIVE_URI_PATTERN = re.compile(r'^(?:https?:|data:|/)', re.IGNORECASE)
+RELATIVE_URI_PATTERN = re.compile(r'^(?:[a-z][a-z0-9+.-]*:|/)', re.IGNORECASE)
 PLAIN_URL_PATTERN = re.compile(r'(?<![\"=])(https?://[^\s<]+)')
 
 
@@ -60,6 +61,47 @@ def _linkify_plain_urls(html: str) -> str:
     return PLAIN_URL_PATTERN.sub(_replace, html)
 
 
+# Rendered Markdown is sanitized with an allowlist before it is marked safe, so raw
+# HTML in an article (e.g. <script>, onerror=, javascript: links) can never reach
+# readers' browsers, even if an author account is compromised.
+ALLOWED_TAGS = {
+    'a', 'abbr', 'blockquote', 'br', 'code', 'dd', 'del', 'div', 'dl', 'dt', 'em',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'img', 'ins', 'li', 'ol', 'p', 'pre',
+    'span', 'strong', 'sub', 'sup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead',
+    'tr', 'ul',
+}
+_HEADING_ATTRS = {'id'}
+ALLOWED_ATTRIBUTES = {
+    'a': {'href', 'title', 'id', 'class'},
+    'abbr': {'title'},
+    'code': {'class'},
+    'div': {'class', 'id'},
+    'h1': _HEADING_ATTRS, 'h2': _HEADING_ATTRS, 'h3': _HEADING_ATTRS,
+    'h4': _HEADING_ATTRS, 'h5': _HEADING_ATTRS, 'h6': _HEADING_ATTRS,
+    'img': {'src', 'alt', 'title'},
+    'li': {'id'},
+    'ol': {'class'},
+    'pre': {'class'},
+    'span': {'class'},
+    'sup': {'id', 'class'},
+    'td': {'style'},
+    'th': {'style'},
+}
+ALLOWED_URL_SCHEMES = {'http', 'https', 'mailto'}
+ALLOWED_STYLE_PROPERTIES = {'text-align'}
+
+
+def sanitize_html(html: str) -> str:
+    return nh3.clean(
+        html,
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRIBUTES,
+        url_schemes=ALLOWED_URL_SCHEMES,
+        filter_style_properties=ALLOWED_STYLE_PROPERTIES,
+        link_rel='noopener noreferrer',
+    )
+
+
 @register.filter
 def markdown_to_html(text):
     """
@@ -88,4 +130,4 @@ def markdown_to_html(text):
     })
 
     html = _linkify_plain_urls(html)
-    return mark_safe(_rewrite_image_sources(html))
+    return mark_safe(sanitize_html(_rewrite_image_sources(html)))

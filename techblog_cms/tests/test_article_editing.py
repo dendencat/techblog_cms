@@ -236,12 +236,47 @@ class ArticleEditingTests(TestCase):
 class MarkdownRenderingTests(TestCase):
     def test_plain_urls_are_linkified(self):
         html = markdown_to_html("Check https://example.com for details")
-        self.assertIn('<a href="https://example.com">https://example.com</a>', html)
+        self.assertIn('href="https://example.com"', html)
+        self.assertIn('>https://example.com</a>', html)
 
     def test_relative_image_paths_use_media_url(self):
         with override_settings(MEDIA_URL='/media/'):
             html = markdown_to_html("![Infra diagram](diagram.png)")
         self.assertIn('src="/media/articles/diagram.png"', html)
+
+    def test_raw_html_scripts_and_handlers_are_stripped(self):
+        html = markdown_to_html(
+            '<script>alert(1)</script>\n\n'
+            '<img src="x.png" onerror="alert(2)">\n\n'
+            '<a href="#" onclick="alert(3)">x</a>\n\n'
+            '<iframe src="https://evil.example"></iframe>'
+        )
+        self.assertNotIn('<script', html)
+        self.assertNotIn('onerror', html)
+        self.assertNotIn('onclick', html)
+        self.assertNotIn('<iframe', html)
+
+    def test_dangerous_url_schemes_are_removed(self):
+        for url in ('javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'data:text/html,<script>alert(1)</script>', 'vbscript:x'):
+            with self.subTest(url=url):
+                html = markdown_to_html(f'[click]({url}) ![img]({url})')
+                self.assertNotIn('javascript:', html.lower())
+                self.assertNotIn('data:', html)
+                self.assertNotIn('vbscript:', html)
+
+    def test_markdown_features_survive_sanitization(self):
+        html = markdown_to_html(
+            '## Heading\n\n'
+            '```python\nprint("hi")\n```\n\n'
+            '| a | b |\n|:--|--:|\n| 1 | 2 |\n\n'
+            'Text[^1]\n\n[^1]: note'
+        )
+        self.assertIn('<h2 id="heading">', html)
+        self.assertIn('class="highlight"', html)
+        self.assertIn('<span class=', html)
+        self.assertIn('<table>', html)
+        self.assertIn('text-align:right', html)
+        self.assertIn('class="footnote"', html)
 
     def test_articles_prefixed_image_paths_are_preserved(self):
         with override_settings(MEDIA_URL='/media/'):
