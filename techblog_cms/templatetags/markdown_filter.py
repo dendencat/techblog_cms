@@ -15,7 +15,15 @@ try:
     importlib.import_module('markdown.extensions.linkify')
     LINKIFY_EXTENSION = 'markdown.extensions.linkify'
 except ModuleNotFoundError:
-    logger.warning('markdown.extensions.linkify not available; auto-linking disabled.')
+    try:
+        # Fallback when Markdown's native linkify is unavailable.
+        importlib.import_module('pymdownx.magiclink')
+        LINKIFY_EXTENSION = 'pymdownx.magiclink'
+    except ModuleNotFoundError:
+        logger.warning(
+            'Neither markdown.extensions.linkify nor pymdownx.magiclink available; '
+            'falling back to plain-URL rewriter.'
+        )
 
 IMG_TAG_SRC_PATTERN = re.compile(r'(<img[^>]+src=")([^"]+)(")')
 RELATIVE_URI_PATTERN = re.compile(r'^(?:[a-z][a-z0-9+.-]*:|/)', re.IGNORECASE)
