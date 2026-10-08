@@ -137,11 +137,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+      # Install the dependencies into a clean venv and audit exactly what got installed,
+      # printing the resolved set so a finding can be traced to the package that pulled it in.
       - name: pip-audit
         run: |
-          python -m pip install --upgrade pip
-          pip install "pip-audit>=2.9,<3.0"
-          pip-audit -r requirements-dev.txt --progress-spinner off
+          python -m venv /tmp/audit
+          /tmp/audit/bin/python -m pip install --upgrade pip
+          /tmp/audit/bin/pip install -r requirements-dev.txt "pip-audit>=2.9,<3.0"
+          # setuptools only comes from venv bootstrapping; the app does not ship it (see Dockerfile.django)
+          /tmp/audit/bin/pip uninstall -y setuptools
+          /tmp/audit/bin/pip list
+          /tmp/audit/bin/pip-audit --progress-spinner off
 
   build:
     needs: [test, smoke, dependency-audit]
