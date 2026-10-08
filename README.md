@@ -62,7 +62,7 @@ docker compose up -d
 
 ### Cloudflare 経由での本番公開(推奨)
 
-Cloudflare Tunnel・Access・WAF を使い、オリジンのポートを一切開けずに `https://blog.iohub.link` で公開できます。
+Cloudflare Tunnel・Access・WAF を使い、オリジンのポートを一切開けずに公開できます(公開ドメインはネームサーバーを Cloudflare に向けたものが必要)。
 手順は [docs/cloudflare-deployment.md](docs/cloudflare-deployment.md) を参照してください。
 
 ```bash

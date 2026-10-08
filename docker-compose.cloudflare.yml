@@ -6,19 +6,33 @@
 # - django はソースをマウントせず読み取り専用ルートファイルシステムで、権限を落として動かす
 # - TLS はエッジで終端するので certbot は不要(letsencrypt プロファイルに退避)
 # - CLOUDFLARE_TUNNEL_TOKEN は .env に置く(`terraform output -raw tunnel_token` の値)
+# - 公開ホスト名は .env の BLOG_HOSTNAME だけで決まる(nginx の server_name、ALLOWED_HOSTS、CSRF_TRUSTED_ORIGINS)
 # 要: Docker Compose v2.24 以降(!reset タグを使うため)
 
 services:
   nginx:
     ports: !reset []
-    volumes:
-      - ./nginx/cloudflare:/etc/nginx/conf.d:ro
+    environment:
+      BLOG_HOSTNAME: ${BLOG_HOSTNAME:?BLOG_HOSTNAME を .env に設定してください}
+      NGINX_ENVSUBST_TEMPLATE_DIR: /etc/nginx/templates
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx/conf.d
+    # イメージに焼いた Let's Encrypt 用の conf.d を空の tmpfs で隠し、
+    # templates/ から envsubst で生成した設定だけを読ませる
+    # (ベースの conf.d・証明書・certbot 用マウントも !override で外す)
+    tmpfs:
+      - /etc/nginx/conf.d
+    volumes: !override
+      - ./nginx/cloudflare/templates:/etc/nginx/templates:ro
       - static_volume:/var/www/static:ro
       - media_volume:/var/www/media:ro
 
   django:
     # 本番ではソースツリーをバインドマウントしない(イメージに焼いたコードだけを使い、
     # ホスト上の .env やリポジトリをコンテナから読み書きさせない)
+    environment:
+      # localhost はコンテナ内の healthcheck 用
+      ALLOWED_HOSTS: ${BLOG_HOSTNAME:?BLOG_HOSTNAME を .env に設定してください},localhost
+      CSRF_TRUSTED_ORIGINS: https://${BLOG_HOSTNAME}
     volumes: !override
       - logs:/app/logs
       - static_volume:/app/static

@@ -1,4 +1,6 @@
-# Cloudflare Tunnel 構成用の nginx 設定(docker-compose.cloudflare.yml から conf.d に差し替えて使う)。
+# Cloudflare Tunnel 構成用の nginx 設定のテンプレート。
+# nginx イメージの起動時に envsubst で ${BLOG_HOSTNAME} が埋められ、/etc/nginx/conf.d/default.conf になる
+# (docker-compose.cloudflare.yml 参照)。値は .env の BLOG_HOSTNAME。
 # TLS は Cloudflare のエッジで終端し、cloudflared → nginx は compose 内部ネットワークの HTTP。
 # nginx はホストにポートを公開しないため、ここに届くのは cloudflared 経由の通信だけ。
 
@@ -23,7 +25,7 @@ server {
 
 server {
     listen 80;
-    server_name blog.iohub.link;
+    server_name ${BLOG_HOSTNAME};
 
     # クライアントの実 IP は Cloudflare が付ける CF-Connecting-IP から取る。
     # 信頼するのは compose 内部ネットワーク(= cloudflared)からの接続だけ。

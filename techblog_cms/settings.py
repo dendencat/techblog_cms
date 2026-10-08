@@ -19,9 +19,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-# ALLOWED_HOSTS configuration
-# ALLOWED_HOSTS configuration
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,django,blog.iohub.link', cast=Csv())
+# ALLOWED_HOSTS configuration (the production hostname comes from the environment)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,django', cast=Csv())
 
 # Application definition
 INSTALLED_APPS = [
@@ -196,8 +195,6 @@ LOGIN_URL = '/login/'
 
 # CSRF trusted origins
 DEFAULT_CSRF_TRUSTED_ORIGINS = (
-    'https://blog.iohub.link',
-    'http://blog.iohub.link',
     'https://localhost',
     'http://localhost',
     'https://127.0.0.1',

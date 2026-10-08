@@ -4,14 +4,13 @@ variable "account_id" {
 }
 
 variable "zone_id" {
-  description = "iohub.link ゾーンの Zone ID"
+  description = "ブログを置くドメインの Zone ID(ドメインのネームサーバーが Cloudflare を向いていること)"
   type        = string
 }
 
 variable "hostname" {
-  description = "ブログの公開ホスト名"
+  description = "ブログの公開ホスト名(zone_id のゾーン配下)。.env の BLOG_HOSTNAME と揃える"
   type        = string
-  default     = "blog.iohub.link"
 }
 
 variable "tunnel_name" {
@@ -48,7 +47,7 @@ variable "access_session_duration" {
 }
 
 variable "manage_zone_settings" {
-  description = "ゾーン全体の TLS/HTTPS 設定を Terraform で管理するか。iohub.link の他サブドメインにも影響する"
+  description = "ゾーン全体の TLS/HTTPS 設定を Terraform で管理するか。同じゾーンの他サブドメインにも影響する"
   type        = bool
   default     = true
 }

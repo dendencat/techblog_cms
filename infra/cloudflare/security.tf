@@ -1,4 +1,4 @@
-# ── ゾーン設定(iohub.link 全体に効く。manage_zone_settings = false で無効化) ──
+# ── ゾーン設定(ゾーン全体に効く。manage_zone_settings = false で無効化) ──
 locals {
   zone_settings = var.manage_zone_settings ? {
     ssl                      = "strict"

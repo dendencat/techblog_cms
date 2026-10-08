@@ -4,7 +4,6 @@
 
 # nginx config
 **/default.conf
-!nginx/cloudflare/default.conf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

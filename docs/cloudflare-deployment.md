@@ -1,7 +1,14 @@
-# Cloudflare で blog.iohub.link を公開する
+# Cloudflare でブログを公開する
 
 techblog_cms(Django + PostgreSQL + Redis + nginx の docker compose 構成)を、
-Cloudflare のエッジ経由で `https://blog.iohub.link` として公開するための手順です。
+Cloudflare のエッジ経由で `https://<BLOG_HOSTNAME>`(例: `blog.example.com`)として公開するための手順です。
+公開ホスト名は `.env` の `BLOG_HOSTNAME` と `terraform.tfvars` の `hostname` の 2 か所で指定します。
+
+> **ドメインの条件**: ホスト名は **ネームサーバーを Cloudflare に向けた(フルセットアップの)ゾーン配下** に置く必要があります。
+> DNS を Route 53 など他社で運用しているドメインのサブドメインだけを Cloudflare に載せる方法(CNAME セットアップ)は
+> Business プラン以上、サブドメイン単位の委任は Enterprise 限定で、Free では使えません。
+> また Tunnel の `cfargotunnel.com` は同じ Cloudflare アカウント内の DNS レコードしか中継しないため、
+> 他社 DNS から CNAME を向けても動きません。
 
 ## 構成
 
@@ -29,12 +36,12 @@ Let's Encrypt/certbot はエッジで TLS を終端するため不要になり�
 
 ## 用意するもの(人が行う作業)
 
-1. **iohub.link が Cloudflare のゾーンとして追加済み**で、ネームサーバーが Cloudflare を向いていること
+1. **ブログ用ドメインが Cloudflare のゾーンとして追加済み**で、ネームサーバーが Cloudflare を向いていること(上の「ドメインの条件」参照)
 2. **Zero Trust の組織(チーム名)** を作成済みであること(ダッシュボードの Zero Trust を初回開くと作成されます)。
    Access のログイン方法は既定の「One-time PIN」で動きます
 3. **Terraform 用 API トークン**(Cloudflare ダッシュボード → My Profile → API Tokens → Custom token)
    - Account: `Cloudflare Tunnel: Edit`, `Access: Apps and Policies: Edit`
-   - Zone(iohub.link のみ): `DNS: Edit`, `Zone Settings: Edit`, `Zone WAF: Edit`, `Cache Rules: Edit`
+   - Zone(ブログ用ゾーンのみ): `DNS: Edit`, `Zone Settings: Edit`, `Zone WAF: Edit`, `Cache Rules: Edit`
    - 権限名はダッシュボードの表記に合わせて選択してください(要検証: 権限名は Cloudflare 側で改称されることがあります)
 4. **オリジンホスト**: Docker Compose v2.24 以降が動く Linux マシン。受信ポートの開放も固定 IP も不要です(下の「費用」参照)
 
@@ -66,8 +73,7 @@ cp .env.example .env
 # .env を編集:
 #   SECRET_KEY は python3 -c "import secrets; print(secrets.token_urlsafe(64))" で生成
 #   DATABASE_URL / POSTGRES_* / REDIS_* を本番用の強い値に
-#   ALLOWED_HOSTS=blog.iohub.link
-#   CSRF_TRUSTED_ORIGINS=https://blog.iohub.link
+#   BLOG_HOSTNAME=blog.example.com(terraform.tfvars の hostname と同じ値。ALLOWED_HOSTS と CSRF_TRUSTED_ORIGINS はここから自動設定)
 #   CLOUDFLARE_TUNNEL_TOKEN=$(terraform output -raw tunnel_token) の値
 chmod 600 .env
 
@@ -81,17 +87,17 @@ cloudflared が追加されます。ホストのファイアウォールは受�
 ### 3. 確認
 
 ```bash
-curl -sI https://blog.iohub.link/            # 200、server: cloudflare
-curl -sI http://blog.iohub.link/             # 301 → https
-curl -sI https://blog.iohub.link/ready/      # 403(WAF で遮断)
-curl -sI https://blog.iohub.link/dashboard/  # 302 → <team>.cloudflareaccess.com(Access のログイン)
+curl -sI https://$BLOG_HOSTNAME/            # 200、server: cloudflare
+curl -sI http://$BLOG_HOSTNAME/             # 301 → https
+curl -sI https://$BLOG_HOSTNAME/ready/      # 403(WAF で遮断)
+curl -sI https://$BLOG_HOSTNAME/dashboard/  # 302 → <team>.cloudflareaccess.com(Access のログイン)
 ```
 
 ブラウザで `/login/` を開くと Access のメール認証 → Django のログインの順に求められます。
 
 ## 注意点
 
-- **ゾーン全体への影響**: `security.tf` の SSL モード `strict`・HTTPS 強制・最小 TLS は iohub.link の全サブドメインに効きます。
+- **ゾーン全体への影響**: `security.tf` の SSL モード `strict`・HTTPS 強制・最小 TLS はゾーンの全サブドメインに効きます。
   他サブドメインの都合で困る場合は `manage_zone_settings = false` にしてください
 - **既存のルール**: WAF カスタムルール・レート制限・キャッシュルールは、ゾーンごとにフェーズ 1 つの ruleset で管理されます。
   ダッシュボードで既にルールを作っている場合、apply が衝突します。既存ルールを `terraform import` するか削除してから実行してください
@@ -147,7 +153,7 @@ Argo、Load Balancing、Workers Paid、Containers など)は使っていませ�
 | キャッシュルール | Free は 10 ルールまで(使用 1) | 0 円 |
 | Terraform state | 手元のローカルファイル | 0 円 |
 | CI(GitHub Actions)・Dependabot | 公開リポジトリは無料 | 0 円 |
-| ドメイン iohub.link | 取得済み(更新費のみ) | 既存 |
+| ブログ用ドメイン | 未定(Cloudflare Registrar で新規取得する場合は年額の原価のみ) | 要検証: TLD ごとの価格 |
 
 費用が発生しうるのは **オリジンホスト** だけです。Tunnel は外向き接続だけで動くため、固定 IP や
 ポート開放は不要で、自宅のマシンでも安全に公開できます。
