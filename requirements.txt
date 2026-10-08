@@ -23,6 +23,6 @@ requests>=2.32.4,<3.0
 
 # Markdown rendering and HTML sanitization of rendered articles
 markdown>=3.5,<4.0
-pymdown-extensions>=10.8,<11.0
+pymdown-extensions>=11.0.1,<13.0  # <11.0.1 has PYSEC-2026-3609 / PYSEC-2026-3654
 linkify-it-py>=2.0,<3.0
 nh3>=0.3,<0.4

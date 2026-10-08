@@ -7,6 +7,14 @@ updates:
     groups:
       python-minor-and-patch:
         update-types: ["minor", "patch"]
+  # pyproject.toml + uv.lock (local development with uv)
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      uv-minor-and-patch:
+        update-types: ["minor", "patch"]
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
