@@ -1,0 +1,34 @@
+name: Cloudflare Infra
+
+on:
+  pull_request:
+    paths:
+      - "infra/cloudflare/**"
+      - ".github/workflows/cloudflare-infra.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "infra/cloudflare/**"
+      - ".github/workflows/cloudflare-infra.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: infra/cloudflare
+
+jobs:
+  # シークレット不要の静的チェックのみ。Cloudflare への apply は手元で実行する
+  # (state をローカルに置き、トークンを GitHub に預けないため)。
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.13.3"
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate

@@ -10,4 +10,4 @@ class BasicTests(TestCase):
         """Test that critical environment settings are configured"""
         from django.conf import settings
         self.assertFalse(settings.DEBUG, 'DEBUG should be False in production')
-        self.assertIn('blog.iohub.link', settings.ALLOWED_HOSTS)
+        self.assertIn('testserver', settings.ALLOWED_HOSTS)

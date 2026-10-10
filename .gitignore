@@ -234,3 +234,15 @@ _note/
 
 # Docker override files
 docker-compose.override.yml
+
+# Terraform (Cloudflare infra) — state にはトークン等の秘密が含まれる
+infra/**/.terraform/
+infra/**/*.tfstate
+infra/**/*.tfstate.*
+infra/**/*.tfvars
+!infra/**/*.tfvars.example
+infra/**/backend_r2.tf
+infra/**/crash.log
+
+# Local backups (scripts/backup.sh)
+backups/

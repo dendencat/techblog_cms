@@ -3,6 +3,7 @@ import os
 import sys
 from pathlib import Path
 from decouple import config, Csv
+from django.core.exceptions import ImproperlyConfigured
 from urllib.parse import urlparse, unquote
 
 logger = logging.getLogger(__name__)
@@ -18,9 +19,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-# ALLOWED_HOSTS configuration
-# ALLOWED_HOSTS configuration
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,django,blog.iohub.link', cast=Csv())
+# ALLOWED_HOSTS configuration (the production hostname comes from the environment)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,django', cast=Csv())
 
 # Application definition
 INSTALLED_APPS = [
@@ -143,6 +143,18 @@ else:
             }
         }
 
+# Fail closed: never run a production process with a missing or placeholder key.
+INSECURE_SECRET_KEYS = {'', 'django-insecure-default-key', 'your-secret-key-here'}
+if not DEBUG and not IS_TESTING and (
+    SECRET_KEY in INSECURE_SECRET_KEYS
+    or SECRET_KEY.startswith('django-insecure')
+    or len(SECRET_KEY) < 50
+):
+    raise ImproperlyConfigured(
+        'SECRET_KEY must be set to a random value of at least 50 characters in production. '
+        "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+    )
+
 DATABASES['default']['CONN_MAX_AGE'] = config('CONN_MAX_AGE', default=60, cast=int)
 
 if not DEBUG:
@@ -183,8 +195,6 @@ LOGIN_URL = '/login/'
 
 # CSRF trusted origins
 DEFAULT_CSRF_TRUSTED_ORIGINS = (
-    'https://blog.iohub.link',
-    'http://blog.iohub.link',
     'https://localhost',
     'http://localhost',
     'https://127.0.0.1',
