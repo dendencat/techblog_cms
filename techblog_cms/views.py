@@ -498,7 +498,7 @@ def _render_editor(request, article, values, errors=None, status=200):
             "article": article,
             "values": values,
             "categories": Category.objects.order_by('name'),
-            "all_tags": Tag.objects.order_by('name'),
+            "all_tag_names": list(Tag.objects.order_by('name').values_list('name', flat=True)),
             "image_help_text": image_help_text,
             "inline_images": inline_images,
             "media_url": settings.MEDIA_URL,

@@ -20,13 +20,14 @@
     <link href="{% static 'css/style.css' %}" rel="stylesheet">
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
     <a href="#main" class="sr-only-focusable fixed top-2 left-2 z-50 btn btn-primary">本文へスキップ</a>
 
     {% block header %}
         {% include 'components/header.html' %}
     {% endblock %}
 
+    {% block messages %}
     {% if messages %}
     <div class="container mx-auto px-4 max-w-6xl mt-4 space-y-2" role="status">
         {% for message in messages %}
@@ -37,6 +38,7 @@
         {% endfor %}
     </div>
     {% endif %}
+    {% endblock %}
 
     <main id="main" class="flex-1 w-full">
         {% block main %}
