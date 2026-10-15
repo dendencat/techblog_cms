@@ -1,27 +1,28 @@
-<aside class="sidebar hidden md:block md:w-64 md:flex-shrink-0">
-    <div class="mb-8">
-        <h3 class="text-lg font-semibold mb-4">Categories</h3>
-        <ul class="space-y-2">
+<aside class="sidebar w-full lg:w-72 flex-shrink-0 space-y-6" aria-label="サイドバー">
+    {% if categories %}
+    <section class="card p-5">
+        <h2 class="text-sm font-bold text-gray-900 mb-3">カテゴリ</h2>
+        <ul class="space-y-1">
             {% for category in categories %}
             <li>
-                <a href="{% url 'category' slug=category.slug %}" 
-                   class="block text-gray-600 hover:text-gray-900">
-                    {{ category.name }}
+                <a href="{% url 'category' slug=category.slug %}"
+                   class="flex items-center gap-2 py-1 text-gray-600 hover:text-blue-600">
+                    <i class="ti ti-folder text-gray-400" aria-hidden="true"></i>{{ category.name }}
                 </a>
             </li>
             {% endfor %}
         </ul>
-    </div>
+    </section>
+    {% endif %}
 
-    <div class="mb-8">
-        <h3 class="text-lg font-semibold mb-4">Popular Tags</h3>
+    {% if tags %}
+    <section class="card p-5">
+        <h2 class="text-sm font-bold text-gray-900 mb-3">タグ</h2>
         <div class="flex flex-wrap gap-2">
             {% for tag in tags %}
-            <a href="{% url 'tag' slug=tag.slug %}" 
-               class="px-3 py-1 bg-gray-200 rounded-full text-sm text-gray-700 hover:bg-gray-300">
-                {{ tag.name }}
-            </a>
+            <a href="{% url 'tag' slug=tag.slug %}" class="chip">#{{ tag.name }}</a>
             {% endfor %}
         </div>
-    </div>
+    </section>
+    {% endif %}
 </aside>

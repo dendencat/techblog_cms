@@ -1,51 +1,63 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
+{% load static %}<!DOCTYPE html>
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}TechBlog CMS{% endblock %}</title>
-    <link rel="icon" type="image/png" href="{% static 'favicon.png' %}" />
-        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" integrity="sha384-HtMZLkYo+pR5/u7zCzXxMJP6QoNnQJt1qkHM0EaOPvGDIzaVZbmYr/TlvUZ/sKAg" crossorigin="anonymous">
-        <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/dist/tabler-icons.min.css" rel="stylesheet" integrity="sha384-IcAOG/1tqv9Qnam+j3mZYPAFcNQMnQpMcafc8Nsvd44AUeTCzhUzdQiJkrROmqW6" crossorigin="anonymous">
-        <link href="{% static 'css/style.css' %}" rel="stylesheet">
-        <style>
-            /* Admin/ダッシュボード/フォームの最低限の整形 */
-            body { font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans JP', sans-serif; }
-            .auth-container, .dashboard, .editor { max-width: 960px; margin: 40px auto; padding: 24px; background:#fff; border:1px solid #e5e7eb; border-radius: 12px; }
-            .form-group { margin-bottom: 16px; }
-            label { display:block; font-weight:600; margin-bottom: 6px; }
-            .form-control { width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; }
-            .btn { display:inline-block; padding:10px 14px; border-radius:8px; text-decoration:none; cursor:pointer; border:1px solid transparent; }
-            .btn-primary { background:#2563eb; color:#fff; }
-            .btn-secondary { background:#6b7280; color:#fff; }
-            .btn-success { background:#16a34a; color:#fff; }
-            .alert { padding:10px 12px; border-radius:8px; }
-            .alert-danger { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
-            .dashboard-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 16px; }
-            .recent-articles { list-style:none; padding:0; }
-            .recent-articles li { padding:10px 8px; border-bottom:1px solid #eee; }
-        </style>
+    <title>{% block title %}{{ blog_title }}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{{ blog_description }}{% endblock %}">
+    {% block meta_extra %}
+    <meta property="og:site_name" content="{{ blog_title }}">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{% block og_title %}{{ blog_title }}{% endblock %}">
+    <meta property="og:description" content="{{ blog_description }}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta name="twitter:card" content="summary">
+    {% endblock %}
+    <link rel="alternate" type="application/rss+xml" title="{{ blog_title }}" href="{% url 'feed' %}">
+    <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" integrity="sha384-HtMZLkYo+pR5/u7zCzXxMJP6QoNnQJt1qkHM0EaOPvGDIzaVZbmYr/TlvUZ/sKAg" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/dist/tabler-icons.min.css" rel="stylesheet" integrity="sha384-IcAOG/1tqv9Qnam+j3mZYPAFcNQMnQpMcafc8Nsvd44AUeTCzhUzdQiJkrROmqW6" crossorigin="anonymous">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-gray-100">
+<body>
+    <a href="#main" class="sr-only-focusable fixed top-2 left-2 z-50 btn btn-primary">本文へスキップ</a>
+
     {% block header %}
         {% include 'components/header.html' %}
     {% endblock %}
 
-    <div class="container mx-auto px-4 pt-24 md:pt-28">
-        <div class="flex flex-col md:flex-row md:items-start gap-8">
-            {% block sidebar %}
-                {% include 'components/sidebar.html' %}
-            {% endblock %}
-
-            {% block content %}
-                {% include 'components/main_content.html' %}
-            {% endblock %}
+    {% if messages %}
+    <div class="container mx-auto px-4 max-w-6xl mt-4 space-y-2" role="status">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}error{% else %}{{ message.tags|default:'info' }}{% endif %} flex items-start gap-2" data-dismissible>
+            <span class="flex-1">{{ message }}</span>
+            <button type="button" class="text-current opacity-60 hover:opacity-100" data-dismiss aria-label="閉じる"><i class="ti ti-x" aria-hidden="true"></i></button>
         </div>
+        {% endfor %}
     </div>
+    {% endif %}
 
-    {% block scripts %}
-    <script src="{% static 'js/main.js' %}"></script>
+    <main id="main" class="flex-1 w-full">
+        {% block main %}
+        <div class="container mx-auto px-4 max-w-6xl py-6 md:py-10">
+            <div class="flex flex-col lg:flex-row lg:items-start gap-8">
+                <div class="flex-1 min-w-0">
+                    {% block content %}{% endblock %}
+                </div>
+                {% block sidebar %}
+                    {% include 'components/sidebar.html' %}
+                {% endblock %}
+            </div>
+        </div>
+        {% endblock %}
+    </main>
+
+    {% block footer %}
+        {% include 'components/footer.html' %}
     {% endblock %}
+
+    <script src="{% static 'js/main.js' %}" defer></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

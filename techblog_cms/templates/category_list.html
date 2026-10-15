@@ -1,32 +1,25 @@
 {% extends 'base.html' %}
 
-{% block title %}Categories - {{ block.super }}{% endblock %}
+{% block title %}カテゴリ - {{ blog_title }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-8">Categories</h1>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {% for category in categories %}
-        <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-semibold mb-2">
-                <a href="{% url 'category' slug=category.slug %}" 
-                   class="text-gray-900 hover:text-blue-600">
-                    {{ category.name }}
-                </a>
-            </h2>
-            {% if category.description %}
-            <p class="text-gray-600 mb-4">{{ category.description }}</p>
-            {% endif %}
-            <div class="text-sm text-gray-500">
-                {{ category.num_articles }} article{{ category.num_articles|pluralize }}
-            </div>
+<header class="mb-6">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-900">カテゴリ</h1>
+</header>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {% for category in category_list %}
+    <a href="{% url 'category' slug=category.slug %}" class="card p-5 block hover:border-blue-300 hover:shadow-sm transition">
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2"><i class="ti ti-folder text-blue-500" aria-hidden="true"></i>{{ category.name }}</h2>
+            <span class="text-sm text-gray-500 whitespace-nowrap">{{ category.num_articles }} 件</span>
         </div>
-        {% empty %}
-        <div class="col-span-full text-center text-gray-500 py-8">
-            No categories found.
-        </div>
-        {% endfor %}
-    </div>
+        {% if category.description %}
+        <p class="text-sm text-gray-600 mt-2">{{ category.description }}</p>
+        {% endif %}
+    </a>
+    {% empty %}
+    <p class="col-span-full card p-10 text-center text-gray-500">カテゴリはまだありません。</p>
+    {% endfor %}
 </div>
 {% endblock %}

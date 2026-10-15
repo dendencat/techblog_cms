@@ -1,35 +1,26 @@
 {% extends 'base.html' %}
-{% block content %}
-<div class="delete-confirm" style="max-width: 500px; margin: 40px auto; padding: 20px; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-  <h2 style="color: #dc3545; margin-bottom: 20px;">記事の削除</h2>
-  
-  <div class="article-info" style="background-color: white; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-    <h3 style="margin: 0 0 10px 0; color: #333;">{{ article.title }}</h3>
-    <p style="margin: 0; color: #666; font-size: 14px;">
-      作成日: {{ article.created_at|date:'Y年m月d日 H:i' }}<br>
-      {% if article.published %}
-        状態: 公開中
-      {% else %}
-        状態: 下書き
-      {% endif %}
-    </p>
-  </div>
-  
-  <p style="color: #666; margin-bottom: 20px;">
-    この記事を削除してもよろしいですか？<br>
-    この操作は取り消すことができません。
-  </p>
-  
-  <div class="button-group" style="display: flex; gap: 10px; justify-content: center;">
-    <form method="post" style="display: inline;">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-danger" style="padding: 10px 20px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-        はい、削除する
-      </button>
-    </form>
-    <a href="{% url 'dashboard' %}" class="btn btn-secondary" style="padding: 10px 20px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 4px;">
-      キャンセル
-    </a>
+
+{% block title %}記事の削除 - {{ blog_title }}{% endblock %}
+
+{% block main %}
+<div class="container mx-auto px-4 py-12">
+  <div class="card max-w-md mx-auto p-6">
+    <h1 class="text-xl font-bold text-red-700 mb-4">記事の削除</h1>
+    <div class="rounded-lg bg-gray-50 border border-gray-200 p-4 mb-4">
+      <p class="font-bold text-gray-900">{{ article.title }}</p>
+      <p class="text-sm text-gray-500 mt-1">
+        作成: {{ article.created_at|date:'Y/m/d H:i' }} ・
+        {% if article.status == 'published' %}公開中{% elif article.status == 'scheduled' %}公開予約{% else %}下書き{% endif %}
+      </p>
+    </div>
+    <p class="text-sm text-gray-600 mb-6">この記事を削除してもよろしいですか？この操作は取り消せません。</p>
+    <div class="flex justify-end gap-2">
+      <a href="{% url 'dashboard' %}" class="btn btn-secondary">キャンセル</a>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">削除する</button>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}

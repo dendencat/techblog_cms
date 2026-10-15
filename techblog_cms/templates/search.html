@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if query %}「{{ query }}」の検索結果{% else %}検索{% endif %} - {{ blog_title }}{% endblock %}
+
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block content %}
+<header class="mb-6">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-900">検索</h1>
+    <form action="{% url 'search' %}" method="get" role="search" class="relative mt-4 max-w-xl">
+        <i class="ti ti-search search-icon" aria-hidden="true"></i>
+        <label for="search-page-input" class="sr-only">キーワード</label>
+        <input type="search" id="search-page-input" name="q" value="{{ query }}" placeholder="キーワード、タグ名、カテゴリ名" class="search-input" autofocus>
+    </form>
+    {% if query %}
+    <p class="text-sm text-gray-500 mt-3">「{{ query }}」に一致する記事: {{ page_obj.paginator.count }} 件</p>
+    {% endif %}
+</header>
+
+{% if query %}
+<section class="card px-5 md:px-6">
+    {% for article in articles %}
+        {% include 'components/article_item.html' %}
+    {% empty %}
+        <div class="py-10 text-center text-gray-500">
+            <p>一致する記事が見つかりませんでした。</p>
+            <p class="text-sm mt-1">別のキーワードを試すか、<a href="{% url 'tags' %}" class="text-blue-600 hover:underline">タグ一覧</a>から探してみてください。</p>
+        </div>
+    {% endfor %}
+</section>
+{% include 'components/pagination.html' %}
+{% endif %}
+{% endblock %}

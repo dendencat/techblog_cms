@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /login/
+
+Sitemap: {{ request.scheme }}://{{ request.get_host }}{% url 'sitemap' %}

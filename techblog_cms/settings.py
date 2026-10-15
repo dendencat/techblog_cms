@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
     'techblog_cms.apps.TechblogCmsConfig',
 ]
 
@@ -56,6 +57,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'techblog_cms.context_processors.sidebar',
+                'techblog_cms.context_processors.site',
             ],
         },
     },
@@ -179,6 +181,10 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Blog identity used in the header, <meta> tags and the RSS feed
+BLOG_TITLE = config('BLOG_TITLE', default='TechBlog')
+BLOG_DESCRIPTION = config('BLOG_DESCRIPTION', default='ソフトウェアとインフラの技術ノート')
+
 # Article asset tuning knobs (overridable via environment variables)
 ARTICLE_IMAGE_MAX_BYTES = config('ARTICLE_IMAGE_MAX_BYTES', default=5 * 1024 * 1024, cast=int)
 ARTICLE_IMAGE_ALLOWED_FORMATS = tuple(
@@ -228,8 +234,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = 'ja'
+# Dates are stored in UTC (USE_TZ) and shown / entered in this zone.
+TIME_ZONE = config('TIME_ZONE', default='Asia/Tokyo')
 USE_I18N = True
 USE_TZ = True
 

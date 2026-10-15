@@ -38,13 +38,14 @@ def test_login_dashboard_article():
             page.goto("http://django:8000/dashboard/articles/new/")
             page.wait_for_load_state('networkidle')
         # 記事作成ページがロードされたことを確認
-        page.wait_for_selector("input[name=title]", timeout=5000)
+        page.wait_for_selector("[name=title]", timeout=5000)
         page.screenshot(path="article_form.png")
         # 記事作成
-        page.fill("input[name=title]", "Test Article")
+        page.fill("[name=title]", "Test Article")
         page.fill("textarea[name=content]", "Test content")
-        page.click("button[type=submit]")
-        # 成功確認
-        page.wait_for_url("**/dashboard")
+        page.click("button[name=action][value=save]")
+        # 成功確認: 保存後はエディタに留まり、ダッシュボードに記事が並ぶ
+        page.wait_for_url("**/dashboard/articles/*/edit/")
+        page.goto("http://django:8000/dashboard/")
         assert "Test Article" in page.content()
         browser.close()

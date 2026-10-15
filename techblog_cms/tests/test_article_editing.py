@@ -1,6 +1,7 @@
 import io
 import shutil
 import tempfile
+from datetime import timedelta
 
 from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
@@ -93,7 +94,15 @@ class ArticleEditingTests(TestCase):
 
         detail_response = self.client.get(reverse("article_detail", args=[refreshed.slug]))
         self.assertContains(detail_response, "Updated body with new info")
-        self.assertContains(detail_response, "Updated:")
+        # Freshly published: no separate "updated" date yet.
+        self.assertNotContains(detail_response, "更新:")
+
+        # Once the article is edited well after publication the updated date is shown.
+        Article.objects.filter(pk=refreshed.pk).update(
+            published_at=refreshed.published_at - timedelta(days=2),
+        )
+        detail_response = self.client.get(reverse("article_detail", args=[refreshed.slug]))
+        self.assertContains(detail_response, "更新:")
 
     def test_uploading_multiple_images_creates_inline_images(self):
         self.client.login(username="editor", password="pass1234")

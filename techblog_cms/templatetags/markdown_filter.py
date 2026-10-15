@@ -1,3 +1,5 @@
+import hashlib
+import html as html_lib
 import importlib
 import logging
 import re
@@ -5,7 +7,10 @@ import markdown
 import nh3
 from django import template
 from django.conf import settings
+from django.core.cache import cache
+from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
+from markdown.extensions.toc import slugify_unicode
 
 register = template.Library()
 logger = logging.getLogger(__name__)
@@ -134,8 +139,74 @@ def markdown_to_html(text):
             'guess_lang': False,
             'css_class': 'highlight',
             'pygments_style': 'github-dark',
-        }
+        },
+        'toc': {
+            # Keep Japanese headings addressable (the default slugify drops non-ASCII).
+            'slugify': slugify_unicode,
+            'permalink': '#',
+            'permalink_class': 'headerlink',
+            'permalink_title': 'この見出しへのリンク',
+        },
     })
 
     html = _linkify_plain_urls(html)
     return mark_safe(sanitize_html(_rewrite_image_sources(html)))
+
+
+HEADING_PATTERN = re.compile(r'<h([23]) id="([^"]+)">(.*?)</h\1>', re.DOTALL)
+HEADERLINK_PATTERN = re.compile(r'<a class="headerlink"[^>]*>.*?</a>', re.DOTALL)
+PRE_BLOCK_PATTERN = re.compile(r'<pre[\s>].*?</pre>|<div class="highlight">.*?</div>', re.DOTALL)
+WHITESPACE_PATTERN = re.compile(r'\s+')
+
+
+def extract_toc(html: str):
+    """Return ``[{'level', 'id', 'text'}]`` for the h2/h3 headings of rendered article HTML."""
+    entries = []
+    for level, anchor, inner in HEADING_PATTERN.findall(str(html or '')):
+        text = html_lib.unescape(strip_tags(HEADERLINK_PATTERN.sub('', inner))).strip()
+        if text:
+            entries.append({'level': int(level), 'id': anchor, 'text': text})
+    return entries
+
+
+def markdown_to_plain_text(text, max_length=None):
+    """Readable plain text of a Markdown document (code blocks dropped), for summaries."""
+    if not text:
+        return ''
+    cache_key = 'md_plain:v1:' + hashlib.sha256(text.encode('utf-8')).hexdigest()
+    plain = cache.get(cache_key)
+    if plain is None:
+        rendered = PRE_BLOCK_PATTERN.sub(' ', str(markdown_to_html(text)))
+        rendered = HEADERLINK_PATTERN.sub('', rendered)
+        plain = WHITESPACE_PATTERN.sub(' ', html_lib.unescape(strip_tags(rendered))).strip()
+        cache.set(cache_key, plain, timeout=60 * 60 * 24)
+    if max_length and len(plain) > max_length:
+        return plain[:max_length].rstrip() + '…'
+    return plain
+
+
+def bind_inline_images(html: str, inline_images) -> str:
+    """Point bare-filename image references at *this* article's uploads.
+
+    ``![x](diagram.png)`` resolves to ``/media/articles/diagram.png``; when two articles
+    upload a file with the same name the storage renames the second one, so the bare
+    name would show the other article's image. Rewrite those references to the URL of
+    the matching image attached to the article being rendered.
+    """
+    by_name = {}
+    for inline_image in inline_images:
+        by_name.setdefault(inline_image.filename, inline_image.image.url)
+    if not html or not by_name:
+        return html
+    media_url = getattr(settings, 'MEDIA_URL', '/media/').rstrip('/') or '/media'
+    bare_prefix = f'{media_url}/articles/'
+
+    def _replace(match: re.Match) -> str:
+        prefix, src, suffix = match.groups()
+        if src.startswith(bare_prefix):
+            name = src[len(bare_prefix):]
+            if '/' not in name and name in by_name:
+                src = by_name[name]
+        return f'{prefix}{src}{suffix}'
+
+    return mark_safe(IMG_TAG_SRC_PATTERN.sub(_replace, str(html)))

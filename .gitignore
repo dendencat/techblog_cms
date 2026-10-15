@@ -246,3 +246,6 @@ infra/**/crash.log
 
 # Local backups (scripts/backup.sh)
 backups/
+
+# User-uploaded media (article images); lives on a volume, never in git
+/media/
