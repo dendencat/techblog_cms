@@ -1,0 +1,11 @@
+<footer class="mt-12 border-t border-gray-200 bg-white">
+    <div class="container mx-auto px-4 max-w-6xl py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500">
+        <p>&copy; {% now "Y" %} {{ blog_title }}</p>
+        <div class="flex items-center gap-4">
+            <a href="{% url 'feed' %}" class="inline-flex items-center gap-1 hover:text-gray-800"><i class="ti ti-rss" aria-hidden="true"></i>RSS</a>
+            {% if not request.user.is_authenticated %}
+            <a href="{% url 'login' %}" class="hover:text-gray-800">管理者ログイン</a>
+            {% endif %}
+        </div>
+    </div>
+</footer>

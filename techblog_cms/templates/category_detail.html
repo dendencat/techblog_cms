@@ -1,35 +1,22 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ category.name }} - {{ block.super }}{% endblock %}
+{% block title %}{{ category.name }} - {{ blog_title }}{% endblock %}
+{% block meta_description %}{{ category.description|default:category.name }}{% endblock %}
 
 {% block content %}
-<div class="bg-white rounded-lg shadow-md p-6">
-    <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ category.name }}</h1>
-    {% if category.description %}
-    <p class="text-gray-600 mb-6">{{ category.description }}</p>
-    {% endif %}
+<header class="mb-6">
+    <nav class="text-sm text-gray-500 mb-2" aria-label="パンくず"><a href="{% url 'categories' %}" class="hover:text-blue-600">カテゴリ</a> / </nav>
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2"><i class="ti ti-folder text-blue-500" aria-hidden="true"></i>{{ category.name }}</h1>
+    {% if category.description %}<p class="text-gray-600 mt-2">{{ category.description }}</p>{% endif %}
+    <p class="text-sm text-gray-500 mt-1">{{ page_obj.paginator.count }} 件の記事</p>
+</header>
 
-    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Articles in this category</h2>
-    <div class="space-y-4">
-        {% for article in articles %}
-        <div class="border-b border-gray-200 pb-4">
-            <h3 class="text-xl font-semibold text-blue-600 hover:text-blue-800">
-                <a href="{% url 'article_detail' article.slug %}">{{ article.title }}</a>
-            </h3>
-            <p class="text-gray-600 mt-2">{{ article.excerpt|truncatewords:30 }}</p>
-            <div class="text-sm text-gray-500 mt-2">
-                <span>Published: {{ article.created_at|date:"M d, Y" }}</span>
-            </div>
-        </div>
-        {% empty %}
-        <p class="text-gray-500">No articles in this category yet.</p>
-        {% endfor %}
-    </div>
-
-    {% include 'components/pagination.html' %}
-
-    <div class="mt-8">
-        <a href="{% url 'categories' %}" class="text-blue-500 hover:underline">← Back to Categories</a>
-    </div>
-</div>
+<section class="card px-5 md:px-6">
+    {% for article in articles %}
+        {% include 'components/article_item.html' %}
+    {% empty %}
+        <p class="py-10 text-center text-gray-500">このカテゴリの記事はまだありません。</p>
+    {% endfor %}
+</section>
+{% include 'components/pagination.html' %}
 {% endblock %}

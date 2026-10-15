@@ -1,38 +1,25 @@
 {% extends 'base.html' %}
 
-{% block title %}Tech Blog - Home{% endblock %}
-
 {% block content %}
-<div class="bg-white rounded-lg shadow-md p-6">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Welcome to Tech Blog</h1>
-    <p class="text-gray-600 mb-8">Explore the latest in technology and innovation.</p>
+<section class="mb-6">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-900">{{ blog_title }}</h1>
+    <p class="text-gray-600 mt-2">{{ blog_description }}</p>
+</section>
 
-    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Latest Articles</h2>
-    <div class="space-y-4">
-        {% for article in articles %}
-        <div class="border-b border-gray-200 pb-4">
-            <h3 class="text-xl font-semibold text-blue-600 hover:text-blue-800">
-                <a href="{% url 'article_detail' article.slug %}">{{ article.title }}</a>
-            </h3>
-            <p class="text-gray-600 mt-2">{{ article.excerpt|truncatewords:30 }}</p>
-            <div class="text-sm text-gray-500 mt-2">
-                <span>Published: {{ article.created_at|date:"M d, Y" }}</span>
-                {% if article.category %}
-                <span class="ml-4">Category: {{ article.category.name }}</span>
-                {% endif %}
-            </div>
-        </div>
-        {% empty %}
-        <p class="text-gray-500">No articles published yet.</p>
-        {% endfor %}
+<section class="card px-5 md:px-6" aria-labelledby="latest-heading">
+    <div class="flex items-center justify-between pt-5">
+        <h2 id="latest-heading" class="text-sm font-bold text-gray-500 uppercase tracking-wider">新着記事</h2>
+        <a href="{% url 'feed' %}" class="text-xs text-gray-500 hover:text-orange-600 inline-flex items-center gap-1"><i class="ti ti-rss" aria-hidden="true"></i>RSS</a>
     </div>
-
-    {% if user.is_authenticated %}
-    <div class="mt-8">
-        <a href="{% url 'dashboard' %}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">
-            Go to Dashboard
-        </a>
+    {% for article in articles %}
+        {% include 'components/article_item.html' %}
+    {% empty %}
+        <p class="py-10 text-center text-gray-500">まだ公開された記事はありません。</p>
+    {% endfor %}
+    {% if articles %}
+    <div class="border-t border-gray-200 py-4 text-center">
+        <a href="{% url 'article_list' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-800">すべての記事を見る →</a>
     </div>
     {% endif %}
-</div>
+</section>
 {% endblock %}

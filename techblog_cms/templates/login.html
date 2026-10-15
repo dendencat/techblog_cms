@@ -1,39 +1,28 @@
 {% extends 'base.html' %}
-{% block header %}
-<header class="fixed top-0 w-full bg-white shadow-sm z-50">
-  <nav class="container mx-auto px-4">
-    <div class="flex items-center justify-between h-20">
-      <a href="{% url 'home' %}" class="flex-shrink-0 text-xl font-bold text-gray-800">
-        TechBlog CMS
-      </a>
-      <div class="flex items-center space-x-6 text-sm font-medium text-gray-600">
-        <a href="{% url 'home' %}" class="hover:text-blue-600">Home</a>
-        <a href="{% url 'article_list' %}" class="hover:text-blue-600">Articles</a>
-        <a href="{% url 'categories' %}" class="hover:text-blue-600">Categories</a>
-        <a href="{% url 'tags' %}" class="hover:text-blue-600">Tags</a>
+
+{% block title %}ログイン - {{ blog_title }}{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block main %}
+<div class="container mx-auto px-4 py-12 md:py-20">
+  <div class="card max-w-sm mx-auto p-6 md:p-8">
+    <h1 class="text-xl font-bold text-gray-900 mb-6">管理者ログイン</h1>
+    {% if error %}
+    <div class="alert alert-error mb-4" role="alert">ユーザー名またはパスワードが正しくありません。</div>
+    {% endif %}
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next|default:'' }}">
+      <div>
+        <label for="username" class="form-label">ユーザー名</label>
+        <input id="username" name="username" type="text" class="form-control" value="{{ username|default:'' }}" autocomplete="username" autocapitalize="none" required {% if not username %}autofocus{% endif %}>
       </div>
-    </div>
-  </nav>
-</header>
-{% endblock %}
-{% block sidebar %}{% endblock %}
-{% block content %}
-<div class="auth-container">
-  <h1>ログイン</h1>
-  {% if error %}
-  <div class="alert alert-danger">{{ error }}</div>
-  {% endif %}
-  <form method="post">
-    {% csrf_token %}
-    <div class="form-group">
-      <label for="username">ユーザー名</label>
-      <input id="username" name="username" type="text" class="form-control" required />
-    </div>
-    <div class="form-group">
-      <label for="password">パスワード</label>
-      <input id="password" name="password" type="password" class="form-control" required />
-    </div>
-    <button type="submit" class="btn btn-primary">ログイン</button>
-  </form>
+      <div>
+        <label for="password" class="form-label">パスワード</label>
+        <input id="password" name="password" type="password" class="form-control" autocomplete="current-password" required {% if username %}autofocus{% endif %}>
+      </div>
+      <button type="submit" class="btn btn-primary w-full">ログイン</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

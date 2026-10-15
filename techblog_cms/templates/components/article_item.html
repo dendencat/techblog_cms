@@ -1,0 +1,27 @@
+<article class="article-item py-5 flex gap-4">
+    <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mb-1.5">
+            <time datetime="{{ article.display_date|date:'c' }}">{{ article.display_date|date:"Y年n月j日" }}</time>
+            {% if article.category %}
+            <a href="{% url 'category' article.category.slug %}" class="inline-flex items-center gap-1 hover:text-blue-600"><i class="ti ti-folder" aria-hidden="true"></i>{{ article.category.name }}</a>
+            {% endif %}
+            <span class="inline-flex items-center gap-1"><i class="ti ti-clock" aria-hidden="true"></i>約{{ article.reading_minutes }}分</span>
+        </div>
+        <h2 class="article-title text-lg md:text-xl font-bold text-gray-900 leading-snug">
+            <a href="{% url 'article_detail' article.slug %}">{{ article.title }}</a>
+        </h2>
+        <p class="text-gray-600 text-sm mt-2 line-clamp-2">{{ article.summary }}</p>
+        {% with tags=article.tags.all %}
+        {% if tags %}
+        <div class="flex flex-wrap gap-1.5 mt-3">
+            {% for tag in tags %}<a href="{% url 'tag' tag.slug %}" class="chip">#{{ tag.name }}</a>{% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+    {% if article.image %}
+    <a href="{% url 'article_detail' article.slug %}" class="hidden sm:block flex-shrink-0" tabindex="-1" aria-hidden="true">
+        <img src="{{ article.image.url }}" alt="" loading="lazy" class="w-32 h-24 md:w-40 md:h-28 object-cover rounded-lg bg-gray-100">
+    </a>
+    {% endif %}
+</article>

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.cache import cache
 
 from .models import Category, Tag
@@ -20,4 +21,11 @@ def sidebar(request):
     return {
         'categories': categories,
         'tags': tags,
+    }
+
+
+def site(request):
+    return {
+        'blog_title': settings.BLOG_TITLE,
+        'blog_description': settings.BLOG_DESCRIPTION,
     }

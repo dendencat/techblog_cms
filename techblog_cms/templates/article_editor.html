@@ -1,502 +1,356 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block content %}
-<div class="editor-container w-full px-4 py-4 lg:py-6">
-  <div class="flex flex-col lg:flex-row gap-6">
-  <!-- エディタ -->
-  <div class="editor-section flex-1 min-w-0 flex flex-col">
-    <h2 class="mb-5 text-xl font-semibold">{% if article %}記事編集{% else %}記事エディタ{% endif %}</h2>
 
-    {% if error %}
-    <div class="alert alert-danger" style="margin-bottom: 20px;">{{ error }}</div>
-    {% endif %}
+{% block title %}{% if article %}{{ article.title }} - 編集{% else %}新しい記事{% endif %} - {{ blog_title }}{% endblock %}
+{% block extra_head %}
+<meta name="robots" content="noindex">
+<link href="{% static 'css/article.css' %}" rel="stylesheet">
+<link href="{% static 'css/editor.css' %}" rel="stylesheet">
+{% endblock %}
+{% block body_class %}editor-page{% endblock %}
 
-    <form method="post" id="articleForm" enctype="multipart/form-data" action="{% if article %}{% url 'article_edit' article.slug %}{% else %}{% url 'article_new' %}{% endif %}" class="flex flex-col h-full">
-      {% csrf_token %}
+{# Distraction-free: no site header / footer while writing #}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block messages %}
+<div class="ed-toast-stack" role="status" aria-live="polite">
+  {% for message in messages %}
+  <div class="ed-toast{% if message.tags == 'error' %} is-error{% endif %}" data-toast>
+    <i class="ti ti-circle-check" aria-hidden="true"></i><span>{{ message }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
 
-      <div class="form-group mb-4">
-        <label for="title" class="font-bold">タイトル</label>
-        <input id="title" name="title" type="text" required
-               value="{{ title_value|default:'' }}"
-               class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-200" />
+{% block main %}
+<form method="post" id="articleForm" enctype="multipart/form-data"
+      action="{% if article %}{% url 'article_edit' article.slug %}{% else %}{% url 'article_new' %}{% endif %}">
+  {% csrf_token %}
+
+  <!-- ===== Top bar ===== -->
+  <header class="ed-topbar">
+    <a href="{% url 'dashboard' %}" class="ed-icon-btn" aria-label="記事の管理に戻る" title="記事の管理に戻る"><i class="ti ti-arrow-left" aria-hidden="true"></i></a>
+    <div class="flex items-center gap-2 min-w-0">
+      {% if not article %}
+      <span class="badge badge-draft">新規</span>
+      {% elif article.status == 'published' %}
+      <span class="badge badge-published"><i class="ti ti-world" aria-hidden="true"></i>公開中</span>
+      {% elif article.status == 'scheduled' %}
+      <span class="badge badge-scheduled" title="{{ article.published_at|date:'Y/m/d H:i' }} に公開"><i class="ti ti-clock" aria-hidden="true"></i>予約 {{ article.published_at|date:'n/j H:i' }}</span>
+      {% else %}
+      <span class="badge badge-draft"><i class="ti ti-file" aria-hidden="true"></i>下書き</span>
+      {% endif %}
+      <span id="save-status" class="ed-state hidden sm:block" aria-live="polite"></span>
+    </div>
+
+    <div class="ed-topbar-center hidden md:block">
+      <div class="ed-mode" role="group" aria-label="表示モード">
+        <button type="button" data-view-mode="write" aria-pressed="true">執筆</button>
+        <button type="button" data-view-mode="split" aria-pressed="false" class="hidden lg:inline-block">分割</button>
+        <button type="button" data-view-mode="preview" aria-pressed="false">プレビュー</button>
       </div>
+    </div>
 
-      <div class="form-group mb-4">
-        <label for="images" class="font-bold">記事画像 (複数可)</label>
-        <input id="images" name="images" type="file" accept="image/*" multiple
-               class="mt-1 w-full px-3 py-2 border border-dashed border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-200 bg-white" />
-        {% if image_help_text %}
-        <p class="mt-1 text-sm text-gray-500">{{ image_help_text }}</p>
-        {% endif %}
-        {% if image_error %}
-        <p class="mt-1 text-sm text-red-600">{{ image_error }}</p>
-        {% endif %}
-        <div id="pending-image-preview"
-             class="mt-3 hidden">
-          <p class="text-sm text-gray-600 mb-2">アップロード予定の画像プレビュー</p>
-          <div id="pending-image-grid" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
+    <div class="ml-auto flex items-center gap-1 md:gap-2">
+      <span class="md:hidden"><button type="button" class="ed-icon-btn" data-toggle-preview aria-label="プレビュー切替" title="プレビュー切替"><i class="ti ti-eye" aria-hidden="true"></i></button></span>
+      {% if article %}
+      <a href="{% url 'article_detail' article.slug %}" target="_blank" rel="noopener" class="ed-icon-btn" title="{% if article.is_public %}公開ページを開く{% else %}実際のページでプレビュー{% endif %}" aria-label="{% if article.is_public %}公開ページを開く{% else %}実際のページでプレビュー{% endif %}"><i class="ti ti-external-link" aria-hidden="true"></i></a>
+      {% endif %}
+      <button type="button" class="ed-icon-btn" data-open-help aria-label="ショートカットと記法" title="ショートカットと記法 (Ctrl+/)"><i class="ti ti-keyboard" aria-hidden="true"></i></button>
+      <button type="button" class="ed-icon-btn" data-open-drawer aria-controls="settings-drawer" aria-expanded="false" title="記事設定">
+        <i class="ti ti-settings" aria-hidden="true"></i><span class="hidden lg:inline">設定</span>
+      </button>
+
+      {% if not article or article.status == 'draft' %}
+      <span class="hidden sm:inline"><button type="submit" name="action" value="save" class="btn btn-secondary btn-sm" data-default-submit title="下書き保存 (Ctrl+S)">下書き保存</button></span>
+      <button type="submit" name="action" value="publish" class="btn btn-primary btn-sm" data-publish-flow>公開に進む</button>
+      {% elif article.status == 'scheduled' %}
+      <span class="hidden sm:inline"><button type="submit" name="action" value="unpublish" class="btn btn-ghost btn-sm" data-confirm="公開予約を取り消して下書きに戻しますか？">予約を取り消す</button></span>
+      <button type="submit" name="action" value="save" class="btn btn-primary btn-sm" data-default-submit title="保存 (Ctrl+S)">予約内容を保存</button>
+      {% else %}
+      <span class="hidden sm:inline"><button type="submit" name="action" value="unpublish" class="btn btn-ghost btn-sm" data-confirm="この記事を非公開（下書き）に戻しますか？読者からは見えなくなります。">非公開に戻す</button></span>
+      <button type="submit" name="action" value="save" class="btn btn-primary btn-sm" data-default-submit title="更新 (Ctrl+S)">更新する</button>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- ===== Writing area ===== -->
+  <div class="ed-body" id="editor-body" data-mode="write">
+    <section class="ed-write" aria-label="執筆">
+      <div class="ed-column">
+        {% if errors %}
+        <div class="alert alert-error mb-6" role="alert">
+          <p class="font-semibold mb-1">保存できませんでした</p>
+          <ul class="list-disc pl-5">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
         </div>
-        {% if inline_images %}
-        <div class="mt-4">
-          <p class="text-sm font-semibold text-gray-700 mb-2">アップロード済みの画像</p>
-          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" id="existing-inline-images">
-            {% for inline_image in inline_images %}
-            <div class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden existing-inline-image"
-                 data-filename="{{ inline_image.filename }}"
-                 data-url="{{ inline_image.image.url }}">
-              <img src="{{ inline_image.image.url }}"
-                   alt="{{ inline_image.filename }}"
-                   class="w-full h-48 object-cover bg-gray-100" />
-              <div class="px-3 py-2 text-xs text-gray-600 space-y-1">
-                <div>ファイル名:
-                  <code class="bg-gray-100 px-1 py-0.5 rounded image-filename">{{ inline_image.filename }}</code>
-                </div>
-                <div>Markdown:
-                  <code class="bg-gray-100 px-1 py-0.5 rounded break-all">![タイトル]({{ inline_image.filename }})</code>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
+        {% endif %}
+
+        <div id="restore-banner" class="alert alert-info mb-6 hidden flex flex-wrap items-center gap-3" role="status">
+          <i class="ti ti-history" aria-hidden="true"></i>
+          <span class="flex-1" data-restore-message></span>
+          <button type="button" class="btn btn-primary btn-sm" data-restore-accept>復元する</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-restore-discard>破棄</button>
+        </div>
+
+        <!-- Cover image -->
+        <div class="ed-cover {% if not article.image %}hidden{% endif %}" data-cover>
+          <img src="{% if article.image %}{{ article.image.url }}{% endif %}" alt="カバー画像" data-cover-img>
+          <div class="ed-cover-actions">
+            <label for="cover_image" class="btn btn-secondary btn-sm cursor-pointer"><i class="ti ti-replace" aria-hidden="true"></i>変更</label>
+            <button type="button" class="btn btn-secondary btn-sm" data-remove-cover><i class="ti ti-trash" aria-hidden="true"></i>削除</button>
           </div>
         </div>
+        <label for="cover_image" class="ed-add-cover" data-add-cover {% if article.image %}hidden{% endif %}>
+          <i class="ti ti-photo-plus" aria-hidden="true"></i>カバー画像を追加
+        </label>
+        <input id="cover_image" name="cover_image" type="file" accept="image/*" class="sr-only">
+        <input type="hidden" name="remove_cover_image" value="" data-remove-cover-input>
+
+        <!-- Title -->
+        <label for="title" class="sr-only">タイトル</label>
+        <textarea id="title" name="title" rows="1" required maxlength="200" autocomplete="off"
+                  class="ed-title" placeholder="タイトル"
+                  {% if not article %}autofocus{% endif %}>{{ values.title }}</textarea>
+
+        <!-- Tags -->
+        <div class="ed-tags" data-tag-editor data-max-tags="5">
+          <label for="tags" class="sr-only">タグ（カンマ区切り）</label>
+          <input id="tags" name="tags" type="text" value="{{ values.tags }}" class="form-control text-sm" placeholder="タグをカンマ区切りで入力（例: Django, Docker）">
+        </div>
+
+        <!-- Toolbar -->
+        <div class="ed-toolbar" role="toolbar" aria-label="書式" aria-controls="content">
+          <button type="button" class="ed-tool" data-format="h2" title="見出し">H2</button>
+          <button type="button" class="ed-tool" data-format="h3" title="小見出し">H3</button>
+          <span class="ed-tool-sep" aria-hidden="true"></span>
+          <button type="button" class="ed-tool" data-format="bold" title="太字 (Ctrl+B)" aria-label="太字"><i class="ti ti-bold" aria-hidden="true"></i></button>
+          <button type="button" class="ed-tool" data-format="italic" title="斜体 (Ctrl+I)" aria-label="斜体"><i class="ti ti-italic" aria-hidden="true"></i></button>
+          <button type="button" class="ed-tool" data-format="link" title="リンク (Ctrl+K)" aria-label="リンク"><i class="ti ti-link" aria-hidden="true"></i></button>
+          <button type="button" class="ed-tool" data-format="code" title="インラインコード" aria-label="インラインコード"><i class="ti ti-code" aria-hidden="true"></i></button>
+          <span class="ed-tool-sep" aria-hidden="true"></span>
+          <button type="button" class="ed-tool" data-format="ul" title="箇条書き (Ctrl+Shift+8)" aria-label="箇条書き"><i class="ti ti-list" aria-hidden="true"></i></button>
+          <button type="button" class="ed-tool" data-format="ol" title="番号付きリスト (Ctrl+Shift+7)" aria-label="番号付きリスト"><i class="ti ti-list-numbers" aria-hidden="true"></i></button>
+          <button type="button" class="ed-tool" data-format="quote" title="引用" aria-label="引用"><i class="ti ti-blockquote" aria-hidden="true"></i></button>
+          <span class="ed-tool-sep" aria-hidden="true"></span>
+          <button type="button" class="ed-tool" data-format="codeblock" title="コードブロック (Ctrl+Shift+K)" aria-label="コードブロック"><i class="ti ti-terminal-2" aria-hidden="true"></i></button>
+          <button type="button" class="ed-tool" data-format="table" title="表" aria-label="表"><i class="ti ti-table" aria-hidden="true"></i></button>
+          <button type="button" class="ed-tool" data-format="image" title="画像をアップロードして挿入" aria-label="画像"><i class="ti ti-photo" aria-hidden="true"></i></button>
+          <button type="button" class="ed-tool" data-format="hr" title="区切り線" aria-label="区切り線"><i class="ti ti-minus" aria-hidden="true"></i></button>
+        </div>
+
+        <!-- Body -->
+        <div data-drop-target>
+          <label for="content" class="sr-only">本文（Markdown）</label>
+          <textarea id="content" name="content" class="ed-content" spellcheck="false"
+                    placeholder="本文を Markdown で書きましょう。画像はドラッグ＆ドロップや貼り付けで追加できます。">{{ values.content }}</textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="ed-preview" aria-label="プレビュー">
+      <div class="ed-column">
+        <img src="{% if article.image %}{{ article.image.url }}{% endif %}" alt="" class="w-full max-h-72 object-cover rounded-xl mb-6 {% if not article.image %}hidden{% endif %}" data-preview-cover>
+        <h1 class="ed-preview-title" data-preview-title>{{ values.title|default:'タイトル未設定' }}</h1>
+        <div class="flex flex-wrap gap-1.5 mb-8" data-preview-tags></div>
+        <div id="preview" class="markdown-content" aria-live="polite">
+          <p class="text-gray-400">本文を書くとここにプレビューが表示されます。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== Status bar ===== -->
+  <footer class="ed-statusbar">
+    <span id="content-stats"></span>
+    <span class="hidden sm:inline" data-image-status></span>
+    <button type="button" class="ml-auto hidden sm:flex items-center gap-1" data-open-help><kbd>Ctrl</kbd>+<kbd>/</kbd> ショートカット</button>
+  </footer>
+
+  <!-- ===== Settings drawer ===== -->
+  <div class="ed-drawer-backdrop hidden" data-drawer-backdrop></div>
+  <aside id="settings-drawer" class="ed-drawer {% if errors %}is-open{% endif %}" aria-label="記事設定" {% if errors %}data-open-on-load{% endif %}>
+    <div class="ed-drawer-header">
+      <h2 class="font-bold text-gray-900">記事設定</h2>
+      <button type="button" class="ed-icon-btn" data-close-drawer aria-label="記事設定を閉じる"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="ed-tabs" role="tablist" aria-label="記事設定">
+      <button type="button" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="true">公開設定</button>
+      <button type="button" role="tab" id="tab-images" aria-controls="panel-images" aria-selected="false" tabindex="-1">画像 <span class="text-gray-400" data-image-count>{{ inline_images|length }}</span></button>
+    </div>
+
+    <div class="ed-drawer-body">
+      <div role="tabpanel" id="panel-settings" aria-labelledby="tab-settings">
+        <div class="ed-field">
+          <label for="category" class="form-label">カテゴリ</label>
+          <select id="category" name="category" class="form-control">
+            {% for category in categories %}
+            <option value="{{ category.pk }}" {% if values.category_id == category.pk|stringformat:'s' %}selected{% endif %}>{{ category.name }}</option>
+            {% empty %}
+            <option value="">General</option>
+            {% endfor %}
+          </select>
+          <label for="new_category" class="sr-only">新しいカテゴリ名</label>
+          <input id="new_category" name="new_category" type="text" maxlength="100" value="{{ values.new_category }}"
+                 placeholder="＋ 新しいカテゴリを作る" class="form-control mt-2 text-sm">
+        </div>
+
+        <div class="ed-field">
+          <label for="published_at" class="form-label">公開日時</label>
+          <input id="published_at" name="published_at" type="datetime-local" value="{{ values.published_at }}" class="form-control" aria-describedby="published-at-hint">
+          <p id="published-at-hint" class="form-hint">空欄なら公開した時刻。未来の日時で予約公開になります。</p>
+        </div>
+
+        <div class="ed-field">
+          <div class="flex items-baseline justify-between">
+            <label for="excerpt" class="form-label">抜粋</label>
+            <span class="text-gray-400 text-xs"><span data-count-for="excerpt">0</span>/300</span>
+          </div>
+          <textarea id="excerpt" name="excerpt" rows="4" maxlength="300" class="form-control text-sm"
+                    placeholder="記事一覧や SNS で表示される説明文" aria-describedby="excerpt-hint">{{ values.excerpt }}</textarea>
+          <p id="excerpt-hint" class="form-hint">空欄なら本文の冒頭から自動で作られます。</p>
+        </div>
+
+        <div class="ed-field">
+          <label for="slug" class="form-label">URL</label>
+          <div class="flex items-center rounded-lg border border-gray-300 bg-gray-50 focus-within:border-blue-500 overflow-hidden">
+            <span class="pl-3 text-sm text-gray-500 whitespace-nowrap">/articles/</span>
+            <input id="slug" name="slug" type="text" maxlength="50" value="{{ values.slug }}" pattern="[-a-zA-Z0-9_]+"
+                   placeholder="自動生成" class="flex-1 min-w-0 bg-white px-2 py-2 text-sm font-mono focus:outline-none" aria-describedby="slug-hint">
+          </div>
+          <p id="slug-hint" class="form-hint">半角英数字・ハイフン。{% if article.published %}<span class="text-amber-700">公開後に変えると既存のリンクが切れます。</span>{% endif %}</p>
+        </div>
+
+        {% if article.status == 'published' or article.status == 'scheduled' %}
+        <div class="ed-field pt-4 border-t border-gray-200 sm:hidden">
+          <button type="submit" name="action" value="unpublish" class="btn btn-secondary w-full" data-confirm="この記事を非公開（下書き）に戻しますか？">非公開に戻す</button>
+        </div>
         {% endif %}
       </div>
 
-      <!-- 書式バー -->
-      <div class="formatting-toolbar mb-2 flex gap-2 flex-wrap">
-        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="h1" title="見出し1" aria-label="見出し1">H1</button>
-        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="h2" title="見出し2" aria-label="見出し2">H2</button>
-        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="h3" title="見出し3" aria-label="見出し3">H3</button>
-        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="bold" title="太字" aria-label="太字"><strong>B</strong></button>
-        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="italic" title="斜体" aria-label="斜体"><em>I</em></button>
-        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="image" title="画像" aria-label="画像">🖼️</button>
-        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="link" title="リンク" aria-label="リンク">🔗</button>
-        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="code" title="コード" aria-label="コード">`</button>
-        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="list" title="リスト" aria-label="リスト">•</button>
-        <button type="button" class="format-btn px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200" data-format="quote" title="引用" aria-label="引用">"</button>
+      <div role="tabpanel" id="panel-images" aria-labelledby="tab-images" hidden>
+        <label for="image-picker" class="ed-dropzone" data-dropzone>
+          <i class="ti ti-cloud-upload text-2xl" aria-hidden="true"></i>
+          <span class="block text-sm font-semibold mt-1">クリックまたはドロップでアップロード</span>
+          <span class="block text-xs mt-1">本文への貼り付け・ドロップでも追加できます</span>
+        </label>
+        <input id="image-picker" name="images" type="file" accept="image/*" multiple class="sr-only">
+        <p class="form-hint mt-2">{{ image_help_text }}</p>
+        <div id="image-errors" class="text-sm text-red-700 space-y-1 mt-2" role="alert"></div>
+        <ul id="image-list" class="mt-4 space-y-2">
+          {% for inline_image in inline_images %}
+          <li class="image-item flex items-center gap-3 p-2 rounded-lg border border-gray-200"
+              data-image-id="{{ inline_image.pk }}" data-markdown-path="{{ inline_image.markdown_path }}" data-filename="{{ inline_image.filename }}">
+            <img src="{{ inline_image.image.url }}" alt="" loading="lazy" class="w-14 h-14 object-cover rounded-md bg-gray-100 flex-shrink-0">
+            <p class="min-w-0 flex-1 text-sm text-gray-800 truncate" title="{{ inline_image.markdown_path }}">{{ inline_image.filename }}</p>
+            <button type="button" class="btn btn-secondary btn-sm" data-insert-image>挿入</button>
+            <button type="button" class="ed-icon-btn text-red-600" data-delete-image aria-label="{{ inline_image.filename }} を削除"><i class="ti ti-trash" aria-hidden="true"></i></button>
+            {% if not inline_image.article_id %}<input type="hidden" name="inline_image_ids" value="{{ inline_image.pk }}">{% endif %}
+          </li>
+          {% empty %}
+          <li class="text-sm text-gray-400 text-center py-4" data-empty-images>まだ画像はありません</li>
+          {% endfor %}
+        </ul>
       </div>
-
-      <div class="form-group flex-1 flex flex-col">
-        <label for="content" class="font-bold mb-1">本文 (Markdown)</label>
-        <textarea id="content" name="content"
-                  class="flex-1 w-full px-3 py-2 border border-gray-300 rounded-md font-mono focus:outline-none focus:ring focus:ring-blue-200 resize-y"
-                  style="min-height: 24rem;"
-                  placeholder="ここに記事を書いてください...">{{ content_value|default:'' }}</textarea>
-      </div>
-
-      <!-- ボタンエリア -->
-      <div class="button-group mt-4 flex gap-3">
-        <button type="submit" name="action" value="publish" class="px-5 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">{% if article %}🚀 更新して公開{% else %}🚀 公開{% endif %}</button>
-        <button type="submit" name="action" value="save" class="px-5 py-2 rounded bg-gray-700 text-white hover:bg-gray-800">{% if article %}💾 下書きを更新{% else %}💾 保存{% endif %}</button>
-        <a href="{% url 'dashboard' %}" class="px-5 py-2 rounded border border-gray-400 text-gray-700 hover:bg-gray-50">戻る</a>
-      </div>
-    </form>
-  </div>
-
-  <!-- プレビュー -->
-  <div class="preview-section flex-1 min-w-0 flex flex-col">
-    <h2 class="mb-5 text-xl font-semibold">プレビュー</h2>
-    <div id="preview" class="markdown-preview flex-1 p-4 border border-gray-300 rounded bg-gray-50 overflow-y-auto">
-      <p class="text-gray-500 italic">プレビューがここに表示されます...</p>
     </div>
-  </div>
+  </aside>
 
-  <!-- ヘルプ（デスクトップは右、モバイルは下） -->
-  <div class="help-section lg:w-80 w-full flex flex-col">
-    <h2 class="mb-5 text-xl font-semibold">Markdown ヘルプ</h2>
-    <div class="help-content flex-1 overflow-y-auto p-2">
-      <h3>基本的な書式</h3>
-      <ul>
-        <li><code># 見出し1</code> - 見出しレベル1</li>
-        <li><code>## 見出し2</code> - 見出しレベル2</li>
-        <li><code>**太字**</code> - 太字テキスト</li>
-        <li><code>*斜体*</code> - 斜体テキスト</li>
-        <li><code>[リンクテキスト](URL)</code> - リンク</li>
-        <li><code>`コード`</code> - インラインコード</li>
-        <li><code>```言語名\nコード\n```</code> - コードブロック</li>
-        <li><code>- 項目</code> - リスト</li>
-        <li><code>> 引用</code> - 引用文</li>
-      </ul>
+  <!-- ===== Publish dialog ===== -->
+  <dialog id="publish-dialog" class="ed-dialog" aria-labelledby="publish-dialog-title">
+    <div class="p-6">
+      <h2 id="publish-dialog-title" class="text-lg font-bold text-gray-900">公開の準備はできましたか？</h2>
+      <p class="text-sm text-gray-500 mt-1 truncate" data-publish-title></p>
 
-      <h3>ショートカットキー</h3>
-      <ul>
-        <li><kbd>Ctrl+B</kbd> - 太字</li>
-        <li><kbd>Ctrl+I</kbd> - 斜体</li>
-        <li><kbd>Ctrl+K</kbd> - リンク</li>
-        <li><kbd>Ctrl+Shift+K</kbd> - コードブロック</li>
-        <li><kbd>Ctrl+Shift+7</kbd> - 順序付きリスト</li>
-        <li><kbd>Ctrl+Shift+8</kbd> - 順序なしリスト</li>
-      </ul>
+      <fieldset class="mt-5 space-y-2">
+        <legend class="form-label">公開タイミング</legend>
+        <label class="ed-choice">
+          <input type="radio" name="publish_timing" value="now" checked>
+          <span><span class="block font-semibold text-sm">今すぐ公開</span><span class="block text-xs text-gray-500">すぐに記事一覧と RSS に載ります</span></span>
+        </label>
+        <label class="ed-choice">
+          <input type="radio" name="publish_timing" value="schedule">
+          <span class="flex-1"><span class="block font-semibold text-sm">日時を指定して公開</span>
+            <input type="datetime-local" id="publish-at" class="form-control text-sm mt-2" aria-label="公開日時" data-publish-at>
+          </span>
+        </label>
+      </fieldset>
+
+      <div class="mt-5">
+        <p class="form-label">公開前チェック</p>
+        <ul class="space-y-1.5" data-publish-checklist></ul>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" class="btn btn-secondary" data-close-dialog>まだ書く</button>
+        <button type="button" class="btn btn-primary" data-confirm-publish><i class="ti ti-send" aria-hidden="true"></i><span data-confirm-publish-label>公開する</span></button>
+      </div>
     </div>
-  </div>
-  </div>
-</div>
+  </dialog>
 
-<style>
-.formatting-toolbar .format-btn {
-  padding: 5px 10px;
-  border: 1px solid #ddd;
-  background-color: white;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 12px;
-  min-width: 30px;
-}
+  <!-- ===== Help dialog ===== -->
+  <dialog id="help-dialog" class="ed-dialog ed-dialog-wide" aria-labelledby="help-dialog-title">
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="help-dialog-title" class="text-lg font-bold text-gray-900">ショートカットと記法</h2>
+        <button type="button" class="ed-icon-btn" data-close-dialog aria-label="閉じる"><i class="ti ti-x" aria-hidden="true"></i></button>
+      </div>
+      <div class="grid gap-6 md:grid-cols-2 text-sm text-gray-700">
+        <div>
+          <h3 class="font-semibold text-gray-900 mb-2">ショートカット</h3>
+          <dl class="grid grid-cols-2 gap-y-2">
+            <dt><kbd>Ctrl</kbd> <kbd>S</kbd></dt><dd>保存</dd>
+            <dt><kbd>Ctrl</kbd> <kbd>B</kbd></dt><dd>太字</dd>
+            <dt><kbd>Ctrl</kbd> <kbd>I</kbd></dt><dd>斜体</dd>
+            <dt><kbd>Ctrl</kbd> <kbd>K</kbd></dt><dd>リンク</dd>
+            <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>K</kbd></dt><dd>コードブロック</dd>
+            <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>7</kbd> / <kbd>8</kbd></dt><dd>番号付き / 箇条書き</dd>
+            <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>P</kbd></dt><dd>プレビュー切替</dd>
+            <dt><kbd>Ctrl</kbd> <kbd>/</kbd></dt><dd>このヘルプ</dd>
+          </dl>
+          <p class="text-xs text-gray-500 mt-3">Mac は <kbd>⌘</kbd>。リスト・引用の行で <kbd>Enter</kbd> を押すと次の行に記号が続きます。</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900 mb-2">Markdown</h3>
+          <dl class="grid grid-cols-2 gap-y-2">
+            <dt><code>## 見出し</code></dt><dd>見出し（目次に載る）</dd>
+            <dt><code>**太字**</code></dt><dd>強調</dd>
+            <dt><code>[文字](URL)</code></dt><dd>リンク</dd>
+            <dt><code>![説明](画像)</code></dt><dd>画像</dd>
+            <dt><code>```python</code></dt><dd>コード（言語名でハイライト）</dd>
+            <dt><code>- 項目</code></dt><dd>リスト</dd>
+            <dt><code>&gt; 引用</code></dt><dd>引用</dd>
+            <dt><code>文[^1]</code></dt><dd>脚注（<code>[^1]: 注</code>）</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </dialog>
+</form>
 
-.formatting-toolbar .format-btn:hover {
-  background-color: #f0f0f0;
-}
+<template id="image-item-template">
+  <li class="image-item flex items-center gap-3 p-2 rounded-lg border border-gray-200">
+    <img src="" alt="" class="w-14 h-14 object-cover rounded-md bg-gray-100 flex-shrink-0">
+    <p class="min-w-0 flex-1 text-sm text-gray-800 truncate" data-filename-label></p>
+    <button type="button" class="btn btn-secondary btn-sm" data-insert-image>挿入</button>
+    <button type="button" class="ed-icon-btn text-red-600" data-delete-image aria-label="削除"><i class="ti ti-trash" aria-hidden="true"></i></button>
+  </li>
+</template>
 
-.markdown-preview h1 { font-size: 1.8em; margin: 0.5em 0; }
-.markdown-preview h2 { font-size: 1.5em; margin: 0.5em 0; }
-.markdown-preview h3 { font-size: 1.3em; margin: 0.5em 0; }
-.markdown-preview p { margin: 0.5em 0; }
-.markdown-preview code { background-color: #f1f3f4; padding: 2px 4px; border-radius: 3px; }
-.markdown-preview pre { background-color: #f1f3f4; padding: 10px; border-radius: 4px; overflow-x: auto; }
-.markdown-preview blockquote { border-left: 4px solid #ddd; padding-left: 10px; margin: 10px 0; color: #666; }
-.markdown-preview ul, .markdown-preview ol { margin: 10px 0; padding-left: 20px; }
-.markdown-preview a { color: #007bff; text-decoration: none; }
-.markdown-preview a:hover { text-decoration: underline; }
-.markdown-preview img { max-width: 100%; height: auto; display: block; margin: 0.75em auto; border-radius: 0.5rem; background: #fff; padding: 4px; box-shadow: 0 1px 4px rgba(15,23,42,0.12); }
-</style>
+{{ all_tag_names|json_script:"editor-tag-names" }}
+{% endblock %}
 
+{% block scripts %}
 <script>
-const MEDIA_URL_TEMPLATE = "{{ media_url|default:'/media/'|escapejs }}";
-const MEDIA_URL = MEDIA_URL_TEMPLATE || '/media/';
-const MEDIA_URL_BASE = MEDIA_URL.replace(/\/$/, '');
-const ARTICLE_MEDIA_SUBDIR = 'articles/';
-
-function resolveMediaPath(rawSrc) {
-  if (!rawSrc) {
-    return '';
-  }
-  const trimmed = rawSrc.trim();
-  if (!trimmed) {
-    return '';
-  }
-  if (/^(?:https?:|data:|\/)/i.test(trimmed)) {
-    return trimmed;
-  }
-  if (trimmed.startsWith(ARTICLE_MEDIA_SUBDIR)) {
-    return `${MEDIA_URL_BASE}/${trimmed}`;
-  }
-  const normalized = trimmed.replace(/^\/+/, '');
-  return `${MEDIA_URL_BASE}/${ARTICLE_MEDIA_SUBDIR}${normalized}`;
-}
-
-function escapeAttribute(value) {
-  return String(value || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-}
-
-// マークダウン変換関数
-function markdownToHtml(markdown) {
-  // 基本的な変換処理
-  let html = markdown
-    // 見出し
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    // 太字
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // 斜体
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    // インラインコード
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // 画像
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-      const resolvedSrc = resolveMediaPath(src);
-      return `<img src="${escapeAttribute(resolvedSrc)}" alt="${escapeAttribute(alt)}" class="markdown-inline-image">`;
-    })
-    // リンク
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, href) => `<a href="${escapeAttribute(href)}">${text}</a>`)
-    // リスト
-    .replace(/^\- (.*$)/gim, '<li>$1</li>')
-    // 引用
-    .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
-    // 改行
-    .replace(/\n/g, '<br>');
-
-  // 連続したliタグをulで囲む
-  html = html.replace(/(<li>.*?<\/li>)+/g, '<ul>$&</ul>');
-
-  return html;
-}
-
-// プレビュー更新関数
-// 簡易debounce
-function debounce(fn, delay) {
-  let t = null;
-  return function(...args) {
-    clearTimeout(t);
-    t = setTimeout(() => fn.apply(this, args), delay);
+  window.EDITOR_CONFIG = {
+    // The preview / upload fetches must send Django's CSRF token in this header.
+    csrfHeader: 'X-CSRFToken',
+    previewUrl: '{% url "preview_markdown" %}',
+    uploadUrl: '{% url "inline_image_upload" %}',
+    deleteUrlTemplate: '{% url "inline_image_delete" 0 %}',
+    articleSlug: '{{ article.slug|default:""|escapejs }}',
+    storageKey: 'techblog:editor:{% if article %}{{ article.pk }}{% else %}new{% endif %}',
+    serverUpdatedAt: '{% if article %}{{ article.updated_at|date:"c" }}{% endif %}',
+    justSaved: {% if messages %}true{% else %}false{% endif %},
   };
-}
-
-async function serverRenderMarkdown(markdown) {
-  try {
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-    const resp = await fetch('/api/preview_markdown/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-CSRFToken': csrfToken ? csrfToken.value : ''
-      },
-      body: 'text=' + encodeURIComponent(markdown || '')
-    });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
-    return data.html || '';
-  } catch (e) {
-    return markdownToHtml(markdown || '');
-  }
-}
-
-async function updatePreview() {
-  const content = document.getElementById('content').value;
-  const preview = document.getElementById('preview');
-  if (content.trim() === '') {
-    preview.innerHTML = '<p class="text-gray-500 italic">プレビューがここに表示されます...</p>';
-  } else {
-    const html = await serverRenderMarkdown(content);
-    preview.innerHTML = html;
-  }
-}
-const updatePreviewDebounced = debounce(updatePreview, 250);
-
-let lastImageFilename = '';
-
-function updateLastImageFilename(name) {
-  if (typeof name !== 'string') {
-    return;
-  }
-  const trimmed = name.trim();
-  if (trimmed) {
-    lastImageFilename = trimmed;
-  }
-}
-
-// 書式ボタンの処理
-function applyFormatting(format) {
-  const textarea = document.getElementById('content');
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  const selectedText = textarea.value.substring(start, end);
-  let replacement = '';
-
-  switch(format) {
-    case 'h1':
-      replacement = '# ' + selectedText;
-      break;
-    case 'h2':
-      replacement = '## ' + selectedText;
-      break;
-    case 'h3':
-      replacement = '### ' + selectedText;
-      break;
-    case 'bold':
-      replacement = selectedText ? '**' + selectedText + '**' : '****';
-      break;
-    case 'italic':
-      replacement = selectedText ? '*' + selectedText + '*' : '**';
-      break;
-    case 'image': {
-      const defaultAlt = selectedText || '画像タイトル';
-      const altInput = prompt('画像のタイトル (代替テキスト) を入力してください。', defaultAlt);
-      if (altInput === null) {
-        textarea.setSelectionRange(start, end);
-        return;
-      }
-      const filenameSuggestion = lastImageFilename;
-      const fileInputName = prompt('挿入する画像ファイル名を入力してください（例: sample.png）。', filenameSuggestion || 'sample.png');
-      if (fileInputName === null || fileInputName.trim() === '') {
-        textarea.setSelectionRange(start, end);
-        return;
-      }
-      const finalAlt = altInput.trim() || defaultAlt;
-      const finalFilename = fileInputName.trim();
-      replacement = '![' + finalAlt + '](' + finalFilename + ')';
-      updateLastImageFilename(finalFilename);
-      break;
-    }
-    case 'link':
-      replacement = selectedText ? '[' + selectedText + '](URL)' : '[リンクテキスト](URL)';
-      break;
-    case 'code':
-      replacement = selectedText ? '`' + selectedText + '`' : '``';
-      break;
-    case 'list':
-      if (selectedText) {
-        // 選択されたテキストを複数行に分割してリスト化
-        const lines = selectedText.split('\n');
-        replacement = lines.map(line => line.trim() ? '- ' + line : line).join('\n');
-      } else {
-        replacement = '- ';
-      }
-      break;
-    case 'quote':
-      replacement = selectedText ? '> ' + selectedText : '> ';
-      break;
-  }
-
-  textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
-  textarea.focus();
-
-  // カーソル位置の調整
-  const newCursorPos = start + replacement.length;
-  textarea.setSelectionRange(newCursorPos, newCursorPos);
-
-  updatePreview();
-}
-
-// イベントリスナーの設定
-document.addEventListener('DOMContentLoaded', function() {
-  const textarea = document.getElementById('content');
-  const formatBtns = document.querySelectorAll('.format-btn');
-  const imageInput = document.getElementById('images');
-  const pendingPreviewWrapper = document.getElementById('pending-image-preview');
-  const pendingPreviewGrid = document.getElementById('pending-image-grid');
-  const existingInlineImageEls = document.querySelectorAll('.existing-inline-image');
-
-  const extractFileName = (path) => {
-    if (!path) {
-      return '';
-    }
-    const normalized = String(path).split('?')[0];
-    const parts = normalized.split('/').filter(Boolean);
-    return parts.length ? parts[parts.length - 1] : normalized;
-  };
-
-  const clearChildren = (node) => {
-    if (!node) {
-      return;
-    }
-    while (node.firstChild) {
-      node.removeChild(node.firstChild);
-    }
-  };
-
-  const renderPendingImages = (fileList) => {
-    if (!pendingPreviewWrapper || !pendingPreviewGrid) {
-      return;
-    }
-    clearChildren(pendingPreviewGrid);
-    if (!fileList || !fileList.length) {
-      pendingPreviewWrapper.classList.add('hidden');
-      return;
-    }
-
-    pendingPreviewWrapper.classList.remove('hidden');
-    Array.from(fileList).forEach((file) => {
-      if (!file) {
-        return;
-      }
-      updateLastImageFilename(file.name || '');
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const fileSrc = e.target?.result;
-        const fileName = file.name || extractFileName(fileSrc);
-        updateLastImageFilename(file.name || fileName);
-
-        const card = document.createElement('div');
-        card.className = 'pending-image-card border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden';
-
-        const img = document.createElement('img');
-        img.src = fileSrc;
-        img.alt = fileName || '選択した画像プレビュー';
-        img.className = 'w-full h-48 object-contain bg-gray-100';
-
-        const meta = document.createElement('div');
-        meta.className = 'px-3 py-2 text-xs text-gray-600 space-y-1';
-
-        const filenameRow = document.createElement('div');
-        const filenameLabel = document.createElement('span');
-        filenameLabel.textContent = 'ファイル名: ';
-        const filenameCode = document.createElement('code');
-        filenameCode.className = 'bg-gray-100 px-1 py-0.5 rounded';
-        filenameCode.textContent = fileName || '';
-        filenameRow.appendChild(filenameLabel);
-        filenameRow.appendChild(filenameCode);
-
-        const markdownRow = document.createElement('div');
-        const markdownLabel = document.createElement('span');
-        markdownLabel.textContent = 'Markdown: ';
-        const markdownCode = document.createElement('code');
-        markdownCode.className = 'bg-gray-100 px-1 py-0.5 rounded break-all';
-        const snippetName = fileName || '画像';
-        markdownCode.textContent = `![${snippetName}](${fileName || ''})`;
-        markdownRow.appendChild(markdownLabel);
-        markdownRow.appendChild(markdownCode);
-
-        meta.appendChild(filenameRow);
-        meta.appendChild(markdownRow);
-
-        card.appendChild(img);
-        card.appendChild(meta);
-
-        pendingPreviewGrid.appendChild(card);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  existingInlineImageEls.forEach((el) => {
-    const filename = el.getAttribute('data-filename');
-    if (filename) {
-      updateLastImageFilename(filename);
-    }
-  });
-
-  if (imageInput) {
-    imageInput.addEventListener('change', () => {
-      renderPendingImages(imageInput.files);
-    });
-    if (imageInput.files && imageInput.files.length) {
-      renderPendingImages(imageInput.files);
-    }
-  }
-
-  // 入力時のプレビュー更新（debounce）
-  textarea.addEventListener('input', updatePreviewDebounced);
-
-  // スクロール同期（比率ベースの簡易同期）
-  const preview = document.getElementById('preview');
-  textarea.addEventListener('scroll', function() {
-    const ratio = textarea.scrollTop / (textarea.scrollHeight - textarea.clientHeight || 1);
-    preview.scrollTop = ratio * (preview.scrollHeight - preview.clientHeight);
-  });
-
-  // 書式ボタンのクリック処理
-  formatBtns.forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.preventDefault(); // フォーム送信を防ぐ
-      e.stopPropagation(); // イベントの伝播を止める
-      const format = this.getAttribute('data-format');
-      applyFormatting(format);
-    });
-  });
-
-  // キーボードショートカット
-  textarea.addEventListener('keydown', function(e) {
-    if (e.ctrlKey || e.metaKey) {
-      switch(e.key) {
-        case 'b':
-          e.preventDefault();
-          applyFormatting('bold');
-          break;
-        case 'i':
-          e.preventDefault();
-          applyFormatting('italic');
-          break;
-        case 'k':
-          e.preventDefault();
-          applyFormatting('link');
-          break;
-      }
-    }
-  });
-
-  // 初期プレビュー更新
-  updatePreview();
-});
 </script>
+<script src="{% static 'js/editor.js' %}" defer></script>
 {% endblock %}

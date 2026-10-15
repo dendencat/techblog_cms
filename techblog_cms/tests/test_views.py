@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
@@ -15,7 +16,8 @@ class HomePageTests(TestCase):
 
     def test_home_page_content(self):
         response = self.client.get(reverse('home'))
-        self.assertContains(response, 'Welcome to Tech Blog')
+        self.assertContains(response, settings.BLOG_TITLE)
+        self.assertContains(response, '新着記事')
 
 
 class SidebarContextProcessorTests(TestCase):
@@ -78,11 +80,12 @@ class PublicArticleViewTests(TestCase):
                 self.assertEqual(response.context['page_obj'].number, 2)
                 self.assertEqual(len(response.context['articles']), 2)
 
-    def test_category_list_count_includes_unpublished_articles(self):
+    def test_category_list_counts_only_public_articles(self):
+        # Readers must not learn that unpublished drafts exist.
         response = self.client.get(reverse('categories'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '13 articles')
+        self.assertContains(response, '12 件')
 
     def test_article_detail_renders_and_caches_content_html(self):
         article = Article.objects.filter(published=True).first()
