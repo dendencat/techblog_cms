@@ -1,0 +1,24 @@
+# 任意: Terraform state を Cloudflare R2 に置く場合だけ使う(既定はローカル state)。
+#   cp backend_r2.tf.example backend_r2.tf して <ACCOUNT_ID> を埋め、
+#   terraform init -migrate-state
+# R2 の無料枠(10GB/月)に十分収まるが、R2 の有効化には支払い方法の登録が必要。
+# アクセスキーは環境変数 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY で渡す。
+terraform {
+  backend "s3" {
+    bucket = "techblog-cms-tfstate"
+    key    = "cloudflare/terraform.tfstate"
+    region = "auto"
+
+    endpoints = {
+      s3 = "https://<ACCOUNT_ID>.r2.cloudflarestorage.com"
+    }
+
+    skip_credentials_validation = true
+    skip_region_validation      = true
+    skip_requesting_account_id  = true
+    skip_metadata_api_check     = true
+    skip_s3_checksum            = true
+    use_path_style              = true
+    use_lockfile                = true
+  }
+}

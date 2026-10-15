@@ -1,0 +1,10 @@
+-r requirements.txt
+
+# Testing
+pytest>=9.0.3,<10.0
+pytest-django>=4.11,<5.0
+pytest-cov>=6.0,<8.0
+playwright>=1.40,<2.0
+
+# Security tooling
+pip-audit>=2.9,<3.0

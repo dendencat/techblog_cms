@@ -11,7 +11,7 @@ def pytest_configure():
     
     # Override settings for tests
     settings.DEBUG = True
-    settings.ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', 'blog.iohub.link']
+    settings.ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
     settings.MIDDLEWARE = [
         'django.middleware.security.SecurityMiddleware',
         'django.contrib.sessions.middleware.SessionMiddleware',

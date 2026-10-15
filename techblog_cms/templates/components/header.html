@@ -22,7 +22,7 @@
                     <a href="{% url 'article_new' %}" class="px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-600 transition">
                         Submit Article
                     </a>
-                    <a href="{% url 'logout' %}" class="text-gray-600 hover:text-gray-900">ログアウト</a>
+                    <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button type="submit" class="text-gray-600 hover:text-gray-900">ログアウト</button></form>
                     {% else %}
                     <a href="{% url 'login' %}" class="px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-600 transition">
                         ログイン
@@ -58,7 +58,7 @@
                 <a href="{% url 'tags' %}" class="text-gray-700 hover:text-blue-600 font-medium">タグ一覧</a>
                 {% if request.user.is_authenticated %}
                     <a href="{% url 'article_new' %}" class="text-gray-700 hover:text-blue-600 font-medium">記事を投稿</a>
-                    <a href="{% url 'logout' %}" class="text-gray-700 hover:text-blue-600 font-medium">ログアウト</a>
+                    <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button type="submit" class="text-gray-700 hover:text-blue-600 font-medium">ログアウト</button></form>
                 {% else %}
                     <a href="{% url 'login' %}" class="text-gray-700 hover:text-blue-600 font-medium">ログイン</a>
                     <a href="#" class="text-blue-500 hover:underline font-medium">ユーザー登録</a>

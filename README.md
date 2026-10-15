@@ -60,7 +60,16 @@ cp .env.example .env
 docker compose up -d
 ```
 
-### SSL 証明書のセットアップ
+### Cloudflare 経由での本番公開(推奨)
+
+Cloudflare Tunnel・Access・WAF を使い、オリジンのポートを一切開けずに公開できます(公開ドメインはネームサーバーを Cloudflare に向けたものが必要)。
+手順は [docs/cloudflare-deployment.md](docs/cloudflare-deployment.md) を参照してください。
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d --build
+```
+
+### SSL 証明書のセットアップ(Cloudflare を使わない場合)
 
 ```bash
 # 証明書の初期化と取得

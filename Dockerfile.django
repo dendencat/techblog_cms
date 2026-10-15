@@ -1,27 +1,10 @@
 FROM python:3.11-slim
 
-# Install system dependencies
+# Install only what the runtime needs (netcat for the DB wait in the entrypoint).
+# No compilers, sudo or browser libraries in the production image.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    build-essential \
-    netcat-openbsd \
-    sudo \
-    # Playwright browser dependencies
-    libglib2.0-0 \
-    libnss3 \
-    libatk-bridge2.0-0 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libgbm1 \
-    libxss1 \
-    libasound2 \
-    libxfixes3 \
-    libcairo2 \
-    libpango-1.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends netcat-openbsd && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -34,23 +17,30 @@ ENV PYTHONUNBUFFERED=1
 
 # Copy requirements first for better caching
 COPY requirements.txt .
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install -r requirements.txt
+# pip/setuptools/wheel are removed afterwards: they are not needed at runtime and pip
+# vendors its own (often older) copies of urllib3/msgpack that scanners flag.
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip uninstall -y pip setuptools wheel
 
 # Copy project files
 COPY . .
 
 # Create a non-root user to run the application.
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser
-# static/media/logs must exist owned by appuser so fresh named volumes
-# mounted there inherit that ownership on first use.
-RUN mkdir -p /app/static /app/media /app/logs && chown -R appuser:appgroup /app
+# Fixed UID/GID: Dockerfile.nginx pre-creates the shared static/media mountpoints with the
+# same IDs, so whichever container initializes a fresh named volume first, appuser can write it.
+RUN groupadd -r -g 10001 appgroup && useradd -r -u 10001 -g appgroup appuser
+# Application code stays root-owned (read-only to the app). Only static/media/logs
+# are owned by appuser, so fresh named volumes mounted there inherit that ownership.
+RUN mkdir -p /app/static /app/media /app/logs && \
+    chown -R appuser:appgroup /app/static /app/media /app/logs
 
 # Entrypoint to run migrations and collectstatic
 RUN chmod +x /app/docker/entrypoint.sh
 ENTRYPOINT ["/bin/bash", "/app/docker/entrypoint.sh"]
 
-# Keep running as root; entrypoint will drop privileges when executing app commands
+# Run as the unprivileged user by default (the entrypoint's chown calls are best-effort).
+USER appuser
 
 # Expose the port the application runs on.
 EXPOSE 8000

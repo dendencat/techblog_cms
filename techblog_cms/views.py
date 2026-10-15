@@ -94,7 +94,8 @@ def article_detail_view(request, slug):
         article = get_object_or_404(articles, slug=slug)
     else:
         article = get_object_or_404(articles, slug=slug, published=True)
-    cache_key = f'article_html:{article.pk}:{article.updated_at.isoformat()}'
+    # v2: entries cached before HTML sanitization must not be served again
+    cache_key = f'article_html:v2:{article.pk}:{article.updated_at.isoformat()}'
     content_html = cache.get(cache_key)
     if content_html is None:
         content_html = str(markdown_to_html(article.content))
@@ -237,7 +238,9 @@ def login_view(request):
     return render(request, 'login.html')
 
 
+@require_http_methods(["POST"])
 def logout_view(request):
+    # POST only (with CSRF) so third-party pages cannot log users out via a link or <img>.
     logout(request)
     return redirect('login')
 

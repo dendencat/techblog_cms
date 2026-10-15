@@ -1,0 +1,33 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      python-minor-and-patch:
+        update-types: ["minor", "patch"]
+  # pyproject.toml + uv.lock (local development with uv)
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      uv-minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "terraform"
+    directory: "/infra/cloudflare"
+    schedule:
+      interval: "weekly"
