@@ -54,7 +54,7 @@ services:
     profiles: ["letsencrypt"]
 
   cloudflared:
-    image: cloudflare/cloudflared:2026.10.0
+    image: cloudflare/cloudflared:2026.10.2
     command: ["tunnel", "--no-autoupdate", "run"]
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN を .env に設定してください}
