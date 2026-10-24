@@ -8,7 +8,7 @@ dependencies = [
     # Keep in sync with requirements.txt (the Docker image installs from that file).
     "django>=5.2.18,<5.3",
     "python-decouple>=3.8,<4.0",
-    "pillow>=12.1.1,<13.0",
+    "pillow>=12.1.1,<14.0",
     "pygments>=2.15,<3.0",
     "psycopg2-binary>=2.9,<3.0",
     "redis>=5.0,<6.0",
