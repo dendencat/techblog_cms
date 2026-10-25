@@ -5,7 +5,7 @@
 # Django 5.2 is the current LTS (security support until April 2028); 4.2 LTS is end-of-life.
 Django>=5.2.18,<5.3
 python-decouple>=3.8,<4.0
-Pillow>=12.1.1,<13.0
+Pillow>=13.0.0,<14.0
 Pygments>=2.15,<3.0
 
 # Database
