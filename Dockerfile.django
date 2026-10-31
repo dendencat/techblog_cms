@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.15-slim
 
 # Install only what the runtime needs (netcat for the DB wait in the entrypoint).
 # No compilers, sudo or browser libraries in the production image.
